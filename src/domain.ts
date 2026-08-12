@@ -1,10 +1,44 @@
-// Minimal stub for the Session 1 live-code blocks.
-//
-// Session 1 homework, task 1: replace this with the full domain model -
-// `User`, `Event`, `Booking` interfaces matching the course domain exactly
-// (roles ATTENDEE | ORGANIZER | ADMIN and booking statuses
-// CONFIRMED | CANCELLED | WAITLISTED as literal-union types, not enums),
-// plus the generic `findById`. Acceptance: `npm run typecheck` passes and
-// there is no `any` anywhere.
+/**
+ * Domain types for Eventify
+ */
 
-export type Event = { id: string; title: string; capacity: number };
+export type Role = "ATTENDEE" | "ORGANIZER" | "ADMIN";
+export type BookingStatus = "CONFIRMED" | "CANCELLED" | "WAITLISTED";
+
+export interface Event {
+  id: string; // "evt-1" tonight; UUIDv7 from Session 3
+  title: string;
+  description: string;
+  venue: string | null; // null = venue not announced yet
+  startsAt: string; // ISO date
+  capacity: number;
+  priceCents: number; // 0 = free
+  organizerId: string; // User.id
+  createdAt: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  createdAt: string;
+}
+
+export interface Booking {
+  id: string;
+  userId: string;
+  eventId: string;
+  status: BookingStatus;
+  createdAt: string;
+}
+
+/**
+ * Generic findById utility
+ */
+export function findById<T extends { id: string }>(
+  items: T[],
+  id: string
+): T | undefined {
+  return items.find((item) => item.id === id);
+}
