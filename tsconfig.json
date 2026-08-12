@@ -5,6 +5,7 @@
     "target": "es2024",
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    "types": ["node"],
 
     // Strictness (Session 1): full strict mode, and indexed access
     // (rows[0], record[key]) yields `T | undefined` so you must check.
