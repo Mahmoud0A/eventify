@@ -2,11 +2,8 @@
 // Strict TypeScript, Zod validation, layered: routes → controller → service
 import express, { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import { Booking } from "./domain.js";
 import { findEventById, findEvents } from "./events/events.service.js";
-
-// In-memory bookings store (Session 3 will migrate this to Prisma)
-const bookings: Booking[] = [];
+import { createBooking, getBookingById, cancelBooking } from "./bookings/bookings.service.js";
 
 // Hard-coded "current user" — Session 2 passes it as a parameter
 const CURRENT_USER_ID = "usr-1";
@@ -52,64 +49,6 @@ function validateQuery(req: Request, res: Response, next: NextFunction) {
 // Booking ID schema
 const bookingIdSchema = z.string();
 
-// ==== Service Layer ====
-
-function getBookingById(id: string): Booking | undefined {
-  return bookings.find((b) => b.id === id);
-}
-
-// Create booking — returns [booking | null, statusCode]
-async function createBooking(eventId: string, userId: string): Promise<[Booking | null, number]> {
-  // 1. Validate event exists
-  const event = await findEventById(eventId);
-  if (!event) {
-    return [null, 404]; // event not found
-  }
-
-  // 2. Check duplicate: userId+eventId pair already has a booking (any status, including CANCELLED)
-  const duplicate = bookings.find((b) => b.userId === userId && b.eventId === eventId);
-  if (duplicate) {
-    // If existing is CANCELLED → rebook-after-cancel → flip it back to CONFIRMED
-    if (duplicate.status === "CANCELLED") {
-      duplicate.status = "CONFIRMED";
-      return [duplicate, 201];
-    }
-    // If existing is CONFIRMED → duplicate → 409
-    if (duplicate.status === "CONFIRMED") {
-      return [null, 409];
-    }
-    // If existing is WAITLISTED → leave it alone, treat as duplicate
-    return [null, 409];
-  }
-
-  // 3. Capacity check: only CONFIRMED bookings count toward capacity; cancelled don't eat capacity
-  const confirmedCount = bookings.filter((b) => b.eventId === eventId && b.status === "CONFIRMED").length;
-  if (confirmedCount >= event.capacity) {
-    return [null, 409]; // event at capacity
-  }
-
-  // 4. Create booking
-  const newBooking: Booking = {
-    id: crypto.randomUUID(),
-    userId,
-    eventId,
-    status: "CONFIRMED",
-    createdAt: new Date(),
-  };
-  bookings.push(newBooking);
-  return [newBooking, 201];
-}
-
-// Soft cancel: flip status to CANCELLED, keep the record
-async function cancelBooking(bookingId: string, userId: string): Promise<[Booking | null, number]> {
-  const target = bookings.find((b) => b.id === bookingId && b.userId === userId);
-  if (!target) {
-    return [null, 404];
-  }
-  target.status = "CANCELLED";
-  return [target, 200];
-}
-
 // ==== Controller Layer ====
 
 async function handleGetHealth(_req: Request, res: Response) {
@@ -142,13 +81,13 @@ async function handleCreateBooking(req: Request, res: Response) {
     }
 
     const { eventId } = result.data;
-    const [booking, status] = await createBooking(eventId, CURRENT_USER_ID);
+    const { booking, status, message } = await createBooking(CURRENT_USER_ID, eventId);
 
     if (status === 404) {
-      return res.status(404).json({ error: "Event not found" });
+      return res.status(404).json({ error: message || "Event not found" });
     }
     if (status === 409) {
-      return res.status(409).json({ error: "Duplicate booking or event at capacity" });
+      return res.status(409).json({ error: message || "Duplicate booking or event at capacity" });
     }
 
     res.status(201).json(booking);
@@ -157,13 +96,13 @@ async function handleCreateBooking(req: Request, res: Response) {
   }
 }
 
-function handleGetBookingById(req: Request, res: Response) {
+async function handleGetBookingById(req: Request, res: Response) {
   const result = bookingIdSchema.safeParse(req.params.id);
   if (!result.success) {
     return res.status(400).json({ error: "Invalid booking id" });
   }
 
-  const booking = getBookingById(result.data);
+  const booking = await getBookingById(result.data);
   if (!booking) {
     return res.status(404).json({ error: "Booking not found" });
   }
@@ -176,7 +115,7 @@ async function handleDeleteBooking(req: Request, res: Response) {
     return res.status(400).json({ error: "Invalid booking id" });
   }
 
-  const [booking, status] = await cancelBooking(result.data, CURRENT_USER_ID);
+  const { booking, status } = await cancelBooking(result.data, CURRENT_USER_ID);
   if (status === 404) {
     return res.status(404).json({ error: "Booking not found" });
   }
