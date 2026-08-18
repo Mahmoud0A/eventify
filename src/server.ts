@@ -1,13 +1,8 @@
 // Eventify — Sessions 1–2 (raw → Express)
 // Strict TypeScript, Zod validation, layered: routes → controller → service
-
 import express, { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { Event, User, Booking, Role, BookingStatus, findById } from "./domain.js";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-Role;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-BookingStatus;
 
 // ==== Data (in-memory, same shape as Session 1) ====
 
