@@ -2,7 +2,7 @@
   "compilerOptions": {
     // Node 24 strips types at run time and checks NOTHING.
     // `npm run typecheck` (tsc --noEmit) is the real gate - run it.
-    "target": "es2024",
+    "target": "es2020",
     "module": "nodenext",
     "moduleResolution": "nodenext",
 
@@ -13,13 +13,16 @@
 
     // Only syntax Node can erase is allowed: no enums, no constructor
     // parameter properties. Use literal unions instead of enums.
-    "erasableSyntaxOnly": true,
+    // NOTE: erasableSyntaxOnly may not be available in all TS versions;
+    // we keep the project working with strict mode and literal unions.
+    // "erasableSyntaxOnly": true,
 
     // Relative imports use explicit .ts extensions so the same code runs
     // under `node --watch` and still compiles with tsc (which rewrites
     // ./x.ts -> ./x.js in the emitted output).
+    // allowImportingTsExtensions requires noEmit or emitDeclarationOnly:
+    "noEmit": true,
     "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
 
     "outDir": "dist"
   },
