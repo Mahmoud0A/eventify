@@ -33,82 +33,104 @@ function checkCapacity(
   return { ok: true };
 }
 
+function toBookingStringDates(booking: Prisma.BookingModel): Booking {
+  return {
+    ...booking,
+    createdAt: booking.createdAt.toISOString(),
+  };
+}
+
 export async function createBooking(
   userId: string,
   eventId: string
 ): Promise<{ booking: Booking | null; status: number; message?: string }> {
-  try {
-    const result = await prisma.$transaction(
-      async (tx) => {
-        const event = await tx.event.findUnique({ where: { id: eventId } });
-        if (!event) {
-          return { booking: null as Booking | null, status: 404 as number, message: "Event not found" };
-        }
+  const maxRetries = 3;
+  let lastError: unknown;
 
-        const existing = await tx.booking.findUnique({
-          where: { userId_eventId: { userId, eventId } },
-        });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const event = await tx.event.findUnique({ where: { id: eventId } });
+          if (!event) {
+            return { booking: null as Booking | null, status: 404 as number, message: "Event not found" };
+          }
 
-        if (existing) {
-          if (existing.status === "CANCELLED") {
-            const confirmedCount = await tx.booking.count({
-              where: { eventId, status: "CONFIRMED" },
-            });
-            const capacityCheck = checkCapacity(confirmedCount, event.capacity);
-            if (!capacityCheck.ok) {
-              return { booking: null, status: 409, message: capacityCheck.message };
+          const existing = await tx.booking.findUnique({
+            where: { userId_eventId: { userId, eventId } },
+          });
+
+          if (existing) {
+            if (existing.status === "CANCELLED") {
+              const confirmedCount = await tx.booking.count({
+                where: { eventId, status: "CONFIRMED" },
+              });
+              const capacityCheck = checkCapacity(confirmedCount, event.capacity);
+              if (!capacityCheck.ok) {
+                return { booking: null, status: 409, message: capacityCheck.message };
+              }
+
+              const updated = await tx.booking.update({
+                where: { id: existing.id },
+                data: { status: "CONFIRMED" },
+              });
+              return { booking: toBookingStringDates(updated), status: 201 };
             }
-
-            const updated = await tx.booking.update({
-              where: { id: existing.id },
-              data: { status: "CONFIRMED" },
-            });
-            return { booking: updated as Booking, status: 201 };
+            if (existing.status === "CONFIRMED") {
+              return { booking: null, status: 409, message: "Duplicate booking" };
+            }
+            return { booking: null, status: 409, message: "Booking already exists" };
           }
-          if (existing.status === "CONFIRMED") {
-            return { booking: null, status: 409, message: "Duplicate booking" };
+
+          const confirmedCount = await tx.booking.count({
+            where: { eventId, status: "CONFIRMED" },
+          });
+          const capacityCheck = checkCapacity(confirmedCount, event.capacity);
+          if (!capacityCheck.ok) {
+            return { booking: null, status: 409, message: capacityCheck.message };
           }
-          return { booking: null, status: 409, message: "Booking already exists" };
+
+          const booking = await tx.booking.create({
+            data: {
+              userId,
+              eventId,
+              status: "CONFIRMED",
+            },
+          });
+
+          return { booking: toBookingStringDates(booking), status: 201 };
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         }
+      );
 
-        const confirmedCount = await tx.booking.count({
-          where: { eventId, status: "CONFIRMED" },
-        });
-        const capacityCheck = checkCapacity(confirmedCount, event.capacity);
-        if (!capacityCheck.ok) {
-          return { booking: null, status: 409, message: capacityCheck.message };
-        }
-
-        const booking = await tx.booking.create({
-          data: {
-            userId,
-            eventId,
-            status: "CONFIRMED",
-          },
-        });
-
-        return { booking: booking as Booking, status: 201 };
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      return result;
+    } catch (error) {
+      lastError = error;
+      const prismaError = error as PrismaError;
+      if (prismaError.code === "P2034" && attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+        continue;
       }
-    );
-
-    console.log("Transaction result:", result);
-    return result;
-  } catch (error) {
-    console.error("Transaction error:", error);
-    const mapped = mapPrismaError(error as PrismaError);
-    return { booking: null, status: mapped.status, message: mapped.message };
+      const mapped = mapPrismaError(prismaError);
+      return { booking: null, status: mapped.status, message: mapped.message };
+    }
   }
+
+  const mapped = mapPrismaError(lastError as PrismaError);
+  return { booking: null, status: mapped.status, message: mapped.message };
 }
 
 export async function getBookingById(id: string): Promise<Booking | null> {
-  return prisma.booking.findUnique({ where: { id } }) as Promise<Booking | null>;
+  const booking = await prisma.booking.findUnique({ where: { id } });
+  if (!booking) return null;
+  return toBookingStringDates(booking);
 }
 
 export async function getAllBookings(): Promise<Booking[]> {
-  return prisma.booking.findMany({ orderBy: { createdAt: "desc" } }) as Promise<Booking[]>;
+  const bookings = await prisma.booking.findMany({ orderBy: { createdAt: "desc" } });
+  return bookings.map(toBookingStringDates);
 }
 
 export async function cancelBooking(
@@ -129,7 +151,7 @@ export async function cancelBooking(
       data: { status: "CANCELLED" },
     });
 
-    return { booking: booking as Booking, status: 200 };
+    return { booking: toBookingStringDates(booking), status: 200 };
   } catch (error) {
     const mapped = mapPrismaError(error as PrismaError);
     return { booking: null, status: mapped.status };

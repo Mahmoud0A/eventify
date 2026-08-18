@@ -10,11 +10,11 @@ export interface Event {
   title: string;
   description: string;
   venue: string | null;
-  startsAt: Date;
+  startsAt: string;
   capacity: number;
   priceCents: number;
   organizerId: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface User {
@@ -30,7 +30,7 @@ export interface Booking {
   userId: string;
   eventId: string;
   status: BookingStatus;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export function findById<T extends { id: string }>(arr: Array<T>, id: string): T | undefined {

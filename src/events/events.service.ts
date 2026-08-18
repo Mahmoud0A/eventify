@@ -1,8 +1,16 @@
 import { Prisma } from "../generated/prisma.ts";
 import { prisma } from "../lib/prisma.ts";
 import { Event } from "../domain.ts";
+import type { EventWhereInput } from "../generated/prisma.ts";
 
-type EventWhereInput = Prisma.EventWhereInput;
+function toEventStringDates(event: Prisma.EventModel): Event {
+  return {
+    ...event,
+    description: event.description ?? "",
+    startsAt: event.startsAt.toISOString(),
+    createdAt: event.createdAt.toISOString(),
+  };
+}
 
 export async function findEvents(filters?: {
   venue?: string;
@@ -35,9 +43,11 @@ export async function findEvents(filters?: {
     prisma.event.count({ where }),
   ]);
 
-  return { data: data as Event[], page, limit, total };
+  return { data: data.map(toEventStringDates), page, limit, total };
 }
 
 export async function findEventById(id: string): Promise<Event | null> {
-  return prisma.event.findUnique({ where: { id } }) as Promise<Event | null>;
+  const event = await prisma.event.findUnique({ where: { id } });
+  if (!event) return null;
+  return toEventStringDates(event);
 }
