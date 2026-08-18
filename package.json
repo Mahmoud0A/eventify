@@ -16,6 +16,7 @@
   "devDependencies": {
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.6",
     "@types/node": "^24.5.0",
     "bcrypt": "^6.0.0",
