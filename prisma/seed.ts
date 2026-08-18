@@ -5,8 +5,11 @@
 // Plus: 20 distinct users and one capacity-5 event for task-2 script
 
 import { PrismaClient } from "../.prisma/client/client.ts";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { getDbUrl } from "../src/config/config.ts";
 
-const prisma = new PrismaClient({} as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+const adapter = new PrismaPg(getDbUrl());
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   // --- Users ---
@@ -120,17 +123,6 @@ async function main() {
       status: "CANCELLED",
     },
   });
-
-  // --- Capacity-5 event: 4 CONFIRMED bookings (1 spot left) ---
-  for (let i = 0; i < 4; i++) {
-    await prisma.booking.create({
-      data: {
-        userId: users[i]!.id,
-        eventId: capacityEvent.id,
-        status: "CONFIRMED",
-      },
-    });
-  }
 
   console.log("Seed completed successfully");
   console.log("Capacity event ID:", capacityEvent.id);

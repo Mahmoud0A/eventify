@@ -6,7 +6,8 @@ import { findEventById, findEvents } from "./events/events.service.js";
 import { createBooking, getBookingById, cancelBooking } from "./bookings/bookings.service.js";
 
 // Hard-coded "current user" — Session 2 passes it as a parameter
-const CURRENT_USER_ID = "usr-1";
+// In production this comes from auth; for testing we use a seeded user ID.
+const CURRENT_USER_ID = "f5c68b8c-d6ba-4ad2-b6a7-30493965360b";
 
 // ==== Zod Schemas ====
 
@@ -80,14 +81,18 @@ async function handleCreateBooking(req: Request, res: Response) {
       return res.status(400).json({ error: "Invalid body" });
     }
 
+    const userId = req.header("X-User-Id") || CURRENT_USER_ID;
     const { eventId } = result.data;
-    const { booking, status, message } = await createBooking(CURRENT_USER_ID, eventId);
+    const { booking, status, message } = await createBooking(userId, eventId);
 
     if (status === 404) {
-      return res.status(404).json({ error: message || "Event not found" });
+      return res.status(404).json({ error: message || "Not found" });
     }
     if (status === 409) {
       return res.status(409).json({ error: message || "Duplicate booking or event at capacity" });
+    }
+    if (status >= 400) {
+      return res.status(status).json({ error: message || "Request failed" });
     }
 
     res.status(201).json(booking);

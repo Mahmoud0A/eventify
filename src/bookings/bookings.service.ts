@@ -1,7 +1,7 @@
 // Booking service — transactional, capacity-aware, rebook-after-cancel
 // Session 3: all logic moves to Prisma transactions against Postgres
 
-import { Prisma, PrismaClient } from "../generated/prisma.ts";
+import { Prisma } from "../generated/prisma.ts";
 import { prisma } from "../lib/prisma.ts";
 import { Booking } from "../domain.ts";
 
@@ -11,11 +11,14 @@ function mapPrismaError(error: PrismaError): { message: string; status: number }
   if (error.code === "P2002") {
     return { message: "Duplicate booking for this user and event", status: 409 };
   }
-  if (error.code === "P2034") {
-    return { message: "Concurrent modification detected", status: 500 };
+  if (error.code === "P2003") {
+    return { message: "Invalid user or event reference", status: 404 };
   }
   if (error.code === "P2025") {
     return { message: "Record not found", status: 404 };
+  }
+  if (error.code === "P2034") {
+    return { message: "Concurrent modification detected", status: 500 };
   }
   return { message: "Internal server error", status: 500 };
 }
@@ -91,8 +94,10 @@ export async function createBooking(
       }
     );
 
+    console.log("Transaction result:", result);
     return result;
   } catch (error) {
+    console.error("Transaction error:", error);
     const mapped = mapPrismaError(error as PrismaError);
     return { booking: null, status: mapped.status, message: mapped.message };
   }
