@@ -1,26 +1,11 @@
-// Eventify — Sessions 1–2 (raw → Express)
+// Eventify — Sessions 1–3
 // Strict TypeScript, Zod validation, layered: routes → controller → service
 import express, { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import { Event, Booking, findById } from "./domain.js";
-import { readFile } from "node:fs/promises";
+import { Booking } from "./domain.js";
+import { findEventById, findEvents } from "./events/events.service.js";
 
-// ==== Data (lazy-loaded from data/events.json) ====
-
-let events: Event[] = [];
-
-async function loadEvents(): Promise<Event[]> {
-  try {
-    const raw = await readFile(new URL("../../data/events.json", import.meta.url), "utf-8");
-    events = JSON.parse(raw) as Event[];
-    return events;
-  } catch (error) {
-    console.error("Failed to load events.json:", error);
-    return [];
-  }
-}
-
-// In-memory bookings store
+// In-memory bookings store (Session 3 will migrate this to Prisma)
 const bookings: Booking[] = [];
 
 // Hard-coded "current user" — Session 2 passes it as a parameter
@@ -69,18 +54,14 @@ const bookingIdSchema = z.string();
 
 // ==== Service Layer ====
 
-function getEventById(id: string): Event | undefined {
-  return findById(events, id);
-}
-
 function getBookingById(id: string): Booking | undefined {
-  return findById(bookings, id);
+  return bookings.find((b) => b.id === id);
 }
 
 // Create booking — returns [booking | null, statusCode]
-function createBooking(eventId: string, userId: string): [Booking | null, number] {
+async function createBooking(eventId: string, userId: string): Promise<[Booking | null, number]> {
   // 1. Validate event exists
-  const event = getEventById(eventId);
+  const event = await findEventById(eventId);
   if (!event) {
     return [null, 404]; // event not found
   }
@@ -113,14 +94,14 @@ function createBooking(eventId: string, userId: string): [Booking | null, number
     userId,
     eventId,
     status: "CONFIRMED",
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(),
   };
   bookings.push(newBooking);
   return [newBooking, 201];
 }
 
 // Soft cancel: flip status to CANCELLED, keep the record
-function cancelBooking(bookingId: string, userId: string): [Booking | null, number] {
+async function cancelBooking(bookingId: string, userId: string): Promise<[Booking | null, number]> {
   const target = bookings.find((b) => b.id === bookingId && b.userId === userId);
   if (!target) {
     return [null, 404];
@@ -136,42 +117,16 @@ async function handleGetHealth(_req: Request, res: Response) {
 }
 
 async function handleGetEvents(req: Request, res: Response) {
-  if (events.length === 0) {
-    await loadEvents();
-  }
-
   const { page, limit, venue, from, to } = res.locals.query;
 
-  let result = [...events];
+  const result = await findEvents({ venue, from, to, page, limit });
 
-  // Filtering — happens before pagination
-  if (venue) {
-    result = result.filter((e) => e.venue === venue);
-  }
-  if (from) {
-    result = result.filter((e) => e.startsAt >= from);
-  }
-  if (to) {
-    result = result.filter((e) => e.startsAt <= to);
-  }
-
-  // Pagination
-  const start = (page - 1) * limit;
-  const end = start + limit;
-  const pageResult = result.slice(start, end);
-
-  const total = result.length;
-
-  res.json({ data: pageResult, page, limit, total });
+  res.json(result);
 }
 
 async function handleGetEventById(req: Request, res: Response) {
-  if (events.length === 0) {
-    await loadEvents();
-  }
-
   const id = typeof req.params.id === "string" ? req.params.id : "";
-  const event = getEventById(id);
+  const event = await findEventById(id);
   if (!event) {
     res.status(404).json({ error: "Event not found" });
   } else {
@@ -179,7 +134,7 @@ async function handleGetEventById(req: Request, res: Response) {
   }
 }
 
-function handleCreateBooking(req: Request, res: Response) {
+async function handleCreateBooking(req: Request, res: Response) {
   try {
     const result = bookingBodySchema.safeParse(req.body);
     if (!result.success) {
@@ -187,7 +142,7 @@ function handleCreateBooking(req: Request, res: Response) {
     }
 
     const { eventId } = result.data;
-    const [booking, status] = createBooking(eventId, CURRENT_USER_ID);
+    const [booking, status] = await createBooking(eventId, CURRENT_USER_ID);
 
     if (status === 404) {
       return res.status(404).json({ error: "Event not found" });
@@ -215,13 +170,13 @@ function handleGetBookingById(req: Request, res: Response) {
   res.json(booking);
 }
 
-function handleDeleteBooking(req: Request, res: Response) {
+async function handleDeleteBooking(req: Request, res: Response) {
   const result = bookingIdSchema.safeParse(req.params.id);
   if (!result.success) {
     return res.status(400).json({ error: "Invalid booking id" });
   }
 
-  const [booking, status] = cancelBooking(result.data, CURRENT_USER_ID);
+  const [booking, status] = await cancelBooking(result.data, CURRENT_USER_ID);
   if (status === 404) {
     return res.status(404).json({ error: "Booking not found" });
   }
@@ -265,7 +220,7 @@ app.use((_err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
 const port = parseInt(process.env.PORT || "3000", 10);
 
-console.log(`Eventify Sessions 1–2 listening on port ${port}`);
+console.log(`Eventify Sessions 1–3 listening on port ${port}`);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

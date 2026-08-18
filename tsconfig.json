@@ -30,5 +30,5 @@
 
     "outDir": "dist"
   },
-  "include": ["src", "prisma"]
+  "include": ["src", "prisma", ".prisma"]
 }
