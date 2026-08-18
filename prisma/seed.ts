@@ -2,52 +2,46 @@
 // Idempotent — runs twice without errors or duplicates
 // Creates: 3 users (one ORGANIZER, one ADMIN, one ATTENDEE),
 //          5 events, and some pre-existing bookings
+// Plus: 20 distinct users and one capacity-5 event for task-2 script
 
-import { PrismaClient } from "./.prisma/client/client.ts";
+import { PrismaClient } from "../.prisma/client/client.ts";
 
 const prisma = new PrismaClient({} as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
 async function main() {
   // --- Users ---
-  const organizer = await prisma.user.upsert({
-    where: { email: "organizer@example.com" },
-    update: {},
-    create: {
-      email: "organizer@example.com",
-      name: "Organizer",
-      role: "ORGANIZER",
-    },
-  });
+  const users = [];
+  const userEmails = [
+    { email: "organizer@example.com", name: "Organizer", role: "ORGANIZER" },
+    { email: "admin@example.com", name: "Admin", role: "ADMIN" },
+    { email: "attendee1@example.com", name: "Attendee One", role: "ATTENDEE" },
+    { email: "attendee2@example.com", name: "Attendee Two", role: "ATTENDEE" },
+  ];
 
-  await prisma.user.upsert({
-    where: { email: "admin@example.com" },
-    update: {},
-    create: {
-      email: "admin@example.com",
-      name: "Admin",
-      role: "ADMIN",
-    },
-  });
-
-  const attendee1 = await prisma.user.upsert({
-    where: { email: "attendee1@example.com" },
-    update: {},
-    create: {
-      email: "attendee1@example.com",
-      name: "Attendee One",
+  for (let i = 3; i < 20; i++) {
+    userEmails.push({
+      email: `user-${i}@example.com`,
+      name: `User ${i}`,
       role: "ATTENDEE",
-    },
-  });
+    });
+  }
 
-  const attendee2 = await prisma.user.upsert({
-    where: { email: "attendee2@example.com" },
-    update: {},
-    create: {
-      email: "attendee2@example.com",
-      name: "Attendee Two",
-      role: "ATTENDEE",
-    },
-  });
+  for (const u of userEmails) {
+    const user = await prisma.user.upsert({
+      where: { email: u.email },
+      update: { email: u.email },
+      create: {
+        email: u.email,
+        name: u.name,
+        role: u.role,
+      },
+    });
+    users.push(user);
+  }
+
+  const organizer = users[0]!;
+  const attendee1 = users[2]!;
+  const attendee2 = users[3]!;
 
   // --- Events ---
   const capacityEvent = await prisma.event.create({
@@ -129,10 +123,9 @@ async function main() {
 
   // --- Capacity-5 event: 4 CONFIRMED bookings (1 spot left) ---
   for (let i = 0; i < 4; i++) {
-    const user = i === 0 ? attendee1 : attendee2;
     await prisma.booking.create({
       data: {
-        userId: user.id,
+        userId: users[i]!.id,
         eventId: capacityEvent.id,
         status: "CONFIRMED",
       },
@@ -140,6 +133,8 @@ async function main() {
   }
 
   console.log("Seed completed successfully");
+  console.log("Capacity event ID:", capacityEvent.id);
+  console.log("User IDs:", users.map((u) => u!.id).join(", "));
 }
 
 main()
