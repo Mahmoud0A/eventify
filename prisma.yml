@@ -1,0 +1,3 @@
+development:
+  provider: postgresql
+  from_env: DATABASE_URL
