@@ -107,6 +107,10 @@ export async function getBookingById(id: string): Promise<Booking | null> {
   return prisma.booking.findUnique({ where: { id } }) as Promise<Booking | null>;
 }
 
+export async function getAllBookings(): Promise<Booking[]> {
+  return prisma.booking.findMany({ orderBy: { createdAt: "desc" } }) as Promise<Booking[]>;
+}
+
 export async function cancelBooking(
   id: string,
   userId: string

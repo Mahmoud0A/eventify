@@ -3,7 +3,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { findEventById, findEvents } from "./events/events.service.js";
-import { createBooking, getBookingById, cancelBooking } from "./bookings/bookings.service.js";
+import { createBooking, getBookingById, getAllBookings, cancelBooking } from "./bookings/bookings.service.js";
 
 // Hard-coded "current user" — Session 2 passes it as a parameter
 // In production this comes from auth; for testing we use a seeded user ID.
@@ -114,6 +114,11 @@ async function handleGetBookingById(req: Request, res: Response) {
   res.json(booking);
 }
 
+async function handleGetBookings(_req: Request, res: Response) {
+  const bookings = await getAllBookings();
+  res.json(bookings);
+}
+
 async function handleDeleteBooking(req: Request, res: Response) {
   const result = bookingIdSchema.safeParse(req.params.id);
   if (!result.success) {
@@ -143,6 +148,9 @@ app.get("/events/:id", handleGetEventById);
 
 // POST /v1/bookings
 app.post("/v1/bookings", handleCreateBooking);
+
+// GET /v1/bookings
+app.get("/v1/bookings", handleGetBookings);
 
 // GET /v1/bookings/:id
 app.get("/v1/bookings/:id", handleGetBookingById);
