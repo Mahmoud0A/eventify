@@ -1,0 +1,3 @@
+{
+  "ignorePaths": ["prisma/migrations/**/*.sql"]
+}
