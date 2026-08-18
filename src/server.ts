@@ -2,21 +2,23 @@
 // Strict TypeScript, Zod validation, layered: routes → controller → service
 import express, { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import { Event, User, Booking, Role, BookingStatus, findById } from "./domain.js";
+import { Event, Booking, findById } from "./domain.js";
+import { readFile } from "node:fs/promises";
 
-// ==== Data (in-memory, same shape as Session 1) ====
+// ==== Data (lazy-loaded from data/events.json) ====
 
-const events: Event[] = [
-  { id: "evt-1", title: "JS 101", description: "JavaScript from zero ceremony", venue: "Room 4", startsAt: "2026-09-14T18:00:00Z", capacity: 30, priceCents: 0, organizerId: "usr-1", createdAt: "2026-08-01T09:00:00Z" },
-  { id: "evt-2", title: "TS at Work", description: "Types that earn their keep", venue: null, startsAt: "2026-09-21T18:00:00Z", capacity: 80, priceCents: 1500, organizerId: "usr-1", createdAt: "2026-08-01T09:05:00Z" },
-  { id: "evt-3", title: "Node Deep Dive", description: "The event loop, for real", venue: "Main Hall", startsAt: "2026-10-02T18:00:00Z", capacity: 25, priceCents: 2500, organizerId: "usr-2", createdAt: "2026-08-02T10:00:00Z" },
-  { id: "evt-4", title: "API Design Live", description: "Endpoints designed in the open", venue: "Main Hall", startsAt: "2026-11-20T18:00:00Z", capacity: 125, priceCents: 0, organizerId: "usr-2", createdAt: "2026-08-03T11:00:00Z" },
-];
+let events: Event[] = [];
 
-const users: User[] = [
-  { id: "usr-1", email: "alice@example.com", name: "Alice", role: "ATTENDEE", createdAt: "2026-08-01T08:00:00Z" },
-  { id: "usr-2", email: "bob@example.com", name: "Bob", role: "ATTENDEE", createdAt: "2026-08-02T08:00:00Z" },
-];
+async function loadEvents(): Promise<Event[]> {
+  try {
+    const raw = await readFile(new URL("../../data/events.json", import.meta.url), "utf-8");
+    events = JSON.parse(raw) as Event[];
+    return events;
+  } catch (error) {
+    console.error("Failed to load events.json:", error);
+    return [];
+  }
+}
 
 // In-memory bookings store
 const bookings: Booking[] = [];
@@ -57,7 +59,7 @@ function validateQuery(req: Request, res: Response, next: NextFunction) {
       to: to.data,
     };
     next();
-  } catch (err) {
+  } catch {
     return res.status(400).json({ error: "Invalid query parameters" });
   }
 }
@@ -129,11 +131,15 @@ function cancelBooking(bookingId: string, userId: string): [Booking | null, numb
 
 // ==== Controller Layer ====
 
-function handleGetHealth(req: Request, res: Response) {
+async function handleGetHealth(_req: Request, res: Response) {
   res.json({ status: "ok", uptime: process.uptime() });
 }
 
-function handleGetEvents(req: Request, res: Response) {
+async function handleGetEvents(req: Request, res: Response) {
+  if (events.length === 0) {
+    await loadEvents();
+  }
+
   const { page, limit, venue, from, to } = res.locals.query;
 
   let result = [...events];
@@ -159,8 +165,12 @@ function handleGetEvents(req: Request, res: Response) {
   res.json({ data: pageResult, page, limit, total });
 }
 
-function handleGetEventById(req: Request, res: Response) {
-  const id = req.params.id as string;
+async function handleGetEventById(req: Request, res: Response) {
+  if (events.length === 0) {
+    await loadEvents();
+  }
+
+  const id = typeof req.params.id === "string" ? req.params.id : "";
   const event = getEventById(id);
   if (!event) {
     res.status(404).json({ error: "Event not found" });
@@ -187,7 +197,7 @@ function handleCreateBooking(req: Request, res: Response) {
     }
 
     res.status(201).json(booking);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 }
@@ -242,14 +252,12 @@ app.get("/v1/bookings/:id", handleGetBookingById);
 app.delete("/v1/bookings/:id", handleDeleteBooking);
 
 // Catch-all 404
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
 // Error middleware — registered last, the only place a 500 should come from
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  // The spec says every error body has one shape: { "error": "<message>" }
-  // No stack traces to the client, ever
+app.use((_err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: "Internal server error" });
 });
 

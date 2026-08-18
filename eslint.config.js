@@ -1,10 +1,30 @@
-// ESLint flat config (ESLint 9+). Preconfigured from day one;
-// CI starts enforcing `npm run lint` in Session 6.
-import tseslint from "typescript-eslint";
+import typescriptParser from "@typescript-eslint/parser";
+import typescriptPlugin from "@typescript-eslint/eslint-plugin";
 
-export default tseslint.config(
+export default [
   {
-    ignores: ["dist/", "coverage/", "node_modules/"],
+    files: ["**/*.ts"],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: "module",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": typescriptPlugin,
+    },
+    rules: {
+      ...typescriptPlugin.configs["recommended"].rules,
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-explicit-any": "error",
+    },
   },
-  tseslint.configs.recommended,
-);
+  {
+    files: ["**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: "module",
+    },
+  },
+];
