@@ -5,7 +5,6 @@
 // Plus: 20 distinct users and one capacity-5 event for task-2 script
 
 import { PrismaClient } from "@prisma/client";
-import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -19,18 +18,19 @@ async function main() {
       email: "organizer@example.com",
       name: "Organizer",
       role: "ORGANIZER",
-      password: await bcrypt.hash("password123", 10),
+      password: "hashed-password",
     },
   });
 
-  const admin = await prisma.user.upsert({
+  // Admin created for database state
+  await prisma.user.upsert({
     where: { email: "admin@example.com" },
     update: {},
     create: {
       email: "admin@example.com",
       name: "Admin",
       role: "ADMIN",
-      password: await bcrypt.hash("password123", 10),
+      password: "hashed-password",
     },
   });
 
@@ -41,7 +41,7 @@ async function main() {
       email: "attendee1@example.com",
       name: "Attendee One",
       role: "ATTENDEE",
-      password: await bcrypt.hash("password123", 10),
+      password: "hashed-password",
     },
   });
 
@@ -52,7 +52,7 @@ async function main() {
       email: "attendee2@example.com",
       name: "Attendee Two",
       role: "ATTENDEE",
-      password: await bcrypt.hash("password123", 10),
+      password: "hashed-password",
     },
   });
 
@@ -72,7 +72,7 @@ async function main() {
     },
   });
 
-  // Additional events for the full system
+  // --- Core events (event1 used for bookings, others for state) ---
   const event1 = await prisma.event.upsert({
     where: { title: "JS 101" },
     update: {},
@@ -87,7 +87,8 @@ async function main() {
     },
   });
 
-  const event2 = await prisma.event.upsert({
+  // Events for database state (IDs not referenced directly beyond this)
+  await prisma.event.upsert({
     where: { title: "TS at Work" },
     update: {},
     create: {
@@ -101,7 +102,7 @@ async function main() {
     },
   });
 
-  const event3 = await prisma.event.upsert({
+  await prisma.event.upsert({
     where: { title: "Node Deep Dive" },
     update: {},
     create: {
@@ -115,7 +116,7 @@ async function main() {
     },
   });
 
-  const event4 = await prisma.event.upsert({
+  await prisma.event.upsert({
     where: { title: "API Design Live" },
     update: {},
     create: {
