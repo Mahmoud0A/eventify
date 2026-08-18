@@ -24,7 +24,11 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
 
+    // Explicit libs for Promise, Promise.finally, and process global
+    "lib": ["ES2015", "ES2018", "ES2020"],
+    "types": ["node"],
+
     "outDir": "dist"
   },
-  "include": ["src"]
+  "include": ["src", "prisma"]
 }

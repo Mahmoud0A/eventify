@@ -4,5 +4,48 @@ datasource db {
 
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../.prisma/client"
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  WAITLISTED
+}
+
+model User {
+  id        String        @id @default(uuid())
+  email     String        @unique
+  name      String?
+  role      String
+  createdAt DateTime      @default(now())
+
+  bookings  Booking[]
+}
+
+model Event {
+  id          String        @id @default(uuid())
+  title       String        @unique
+  description String?
+  venue       String?
+  startsAt    DateTime
+  capacity    Int
+  priceCents  Int
+  organizerId String
+  createdAt   DateTime      @default(now())
+
+  bookings    Booking[]
+}
+
+model Booking {
+  id        String        @id @default(uuid())
+  userId    String
+  eventId   String
+  status    BookingStatus @default(CONFIRMED)
+  createdAt DateTime      @default(now())
+
+  user      User          @relation(fields: [userId], references: [id])
+  event     Event         @relation(fields: [eventId], references: [id])
+
+  @@unique([userId, eventId])
 }

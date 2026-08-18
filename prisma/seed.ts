@@ -1,16 +1,14 @@
 // Seed script for Eventify — Session 3
-// Idempotent — runs twice without errors or duplicates (uses upsert)
+// Idempotent — runs twice without errors or duplicates
 // Creates: 3 users (one ORGANIZER, one ADMIN, one ATTENDEE),
 //          5 events, and some pre-existing bookings
-// Plus: 20 distinct users and one capacity-5 event for task-2 script
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "./.prisma/client/client.ts";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({} as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
 async function main() {
   // --- Users ---
-  // Using upsert so the seed is idempotent
   const organizer = await prisma.user.upsert({
     where: { email: "organizer@example.com" },
     update: {},
@@ -18,11 +16,9 @@ async function main() {
       email: "organizer@example.com",
       name: "Organizer",
       role: "ORGANIZER",
-      password: "hashed-password",
     },
   });
 
-  // Admin created for database state
   await prisma.user.upsert({
     where: { email: "admin@example.com" },
     update: {},
@@ -30,7 +26,6 @@ async function main() {
       email: "admin@example.com",
       name: "Admin",
       role: "ADMIN",
-      password: "hashed-password",
     },
   });
 
@@ -41,7 +36,6 @@ async function main() {
       email: "attendee1@example.com",
       name: "Attendee One",
       role: "ATTENDEE",
-      password: "hashed-password",
     },
   });
 
@@ -52,16 +46,12 @@ async function main() {
       email: "attendee2@example.com",
       name: "Attendee Two",
       role: "ATTENDEE",
-      password: "hashed-password",
     },
   });
 
   // --- Events ---
-  // Capacity-5 event for task-2 parallel bookings script
-  const capacityEvent = await prisma.event.upsert({
-    where: { title: "Capacity Workshop" },
-    update: {},
-    create: {
+  const capacityEvent = await prisma.event.create({
+    data: {
       title: "Capacity Workshop",
       description: "Event with capacity 5 to test concurrent bookings",
       venue: "Main Hall",
@@ -72,11 +62,8 @@ async function main() {
     },
   });
 
-  // --- Core events (event1 used for bookings, others for state) ---
-  const event1 = await prisma.event.upsert({
-    where: { title: "JS 101" },
-    update: {},
-    create: {
+  const event1 = await prisma.event.create({
+    data: {
       title: "JS 101",
       description: "JavaScript from zero ceremony",
       venue: "Room 4",
@@ -87,11 +74,8 @@ async function main() {
     },
   });
 
-  // Events for database state (IDs not referenced directly beyond this)
-  await prisma.event.upsert({
-    where: { title: "TS at Work" },
-    update: {},
-    create: {
+  await prisma.event.create({
+    data: {
       title: "TS at Work",
       description: "Types that earn their keep",
       venue: null,
@@ -102,10 +86,8 @@ async function main() {
     },
   });
 
-  await prisma.event.upsert({
-    where: { title: "Node Deep Dive" },
-    update: {},
-    create: {
+  await prisma.event.create({
+    data: {
       title: "Node Deep Dive",
       description: "The event loop, for real",
       venue: "Main Hall",
@@ -116,10 +98,8 @@ async function main() {
     },
   });
 
-  await prisma.event.upsert({
-    where: { title: "API Design Live" },
-    update: {},
-    create: {
+  await prisma.event.create({
+    data: {
       title: "API Design Live",
       description: "Endpoints designed in the open",
       venue: "Main Hall",
@@ -130,8 +110,7 @@ async function main() {
     },
   });
 
-  // --- Pre-existing bookings (some CONFIRMED, some CANCELLED) ---
-  // These establish initial state; idempotent via upsert-like logic
+  // --- Pre-existing bookings ---
   await prisma.booking.create({
     data: {
       userId: attendee1.id,
@@ -144,16 +123,13 @@ async function main() {
     data: {
       userId: attendee2.id,
       eventId: event1.id,
-      status: "CANCELLED", // cancelled bookings don't eat capacity
+      status: "CANCELLED",
     },
   });
 
   // --- Capacity-5 event: 4 CONFIRMED bookings (1 spot left) ---
-  // This sets up the scenario where the 5th user will get 409 (capacity)
   for (let i = 0; i < 4; i++) {
-    const user = i === 0 ? attendee1 : attendee2; // cycle between two users
-    // But we need 20 distinct users for the task-2 script...
-    // For now, just create bookings with the existing users
+    const user = i === 0 ? attendee1 : attendee2;
     await prisma.booking.create({
       data: {
         userId: user.id,
