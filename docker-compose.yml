@@ -1,0 +1,40 @@
+# =============================================================================
+# Eventify — local infrastructure.
+# Usage:
+#   docker compose up -d            # start everything
+#   docker compose ps               # is it healthy?
+#   docker compose down             # stop (data kept)
+#   docker compose down -v          # stop AND wipe data
+# =============================================================================
+
+name: eventify
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: eventify
+      POSTGRES_PASSWORD: eventify
+      POSTGRES_DB: eventify
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventify -d eventify"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

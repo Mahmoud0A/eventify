@@ -3,16 +3,18 @@
 
 import { config as dotenvConfig } from "dotenv";
 import path from "path";
+import { z } from "zod";
 
 // Load .env file from the project root
 dotenvConfig({ path: path.resolve("./.env") });
 
-// Export configured variables
-export const env = {
-  DATABASE_URL: process.env.DATABASE_URL,
-};
+const envSchema = z.object({
+  DATABASE_URL: z.string().url().optional(),
+  PORT: z.string().default("3000"),
+});
 
-// Type-safe accessor
+export const env = envSchema.parse(process.env);
+
 export function getDbUrl(): string {
   if (!env.DATABASE_URL) {
     throw new Error("DATABASE_URL is not defined");
