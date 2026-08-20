@@ -1,6 +1,46 @@
-[
-  { "id": "evt-1", "title": "JS 101", "description": "JavaScript from zero ceremony", "venue": "Room 4", "startsAt": "2026-09-14T18:00:00Z", "capacity": 30, "priceCents": 0, "organizerId": "usr-1", "createdAt": "2026-08-01T09:00:00Z" },
-  { "id": "evt-2", "title": "TS at Work", "description": "Types that earn their keep", "venue": null, "startsAt": "2026-09-21T18:00:00Z", "capacity": 80, "priceCents": 1500, "organizerId": "usr-1", "createdAt": "2026-08-01T09:05:00Z" },
-  { "id": "evt-3", "title": "Node Deep Dive", "description": "The event loop, for real", "venue": "Main Hall", "startsAt": "2026-10-02T18:00:00Z", "capacity": 25, "priceCents": 2500, "organizerId": "usr-2", "createdAt": "2026-08-02T10:00:00Z" },
-  { "id": "evt-4", "title": "API Design Live", "description": "Endpoints designed in the open", "venue": "Main Hall", "startsAt": "2026-11-20T18:00:00Z", "capacity": 125, "priceCents": 0, "organizerId": "usr-2", "createdAt": "2026-08-03T11:00:00Z" }
+﻿[
+  {
+    \"id\": \"11111111-1111-1111-1111-111111111111\",
+    \"title\": \"Tech Conference 2024\",
+    \"description\": \"Annual technology conference with speakers from top companies\",
+    \"venue\": \"Convention Center\",
+    \"startsAt\": \"2024-06-15T09:00:00.000Z\",
+    \"capacity\": 100,
+    \"priceCents\": 29900,
+    \"organizerId\": \"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",
+    \"createdAt\": \"2024-01-15T10:00:00.000Z\"
+  },
+  {
+    \"id\": \"22222222-2222-2222-2222-222222222222\",
+    \"title\": \"React Workshop\",
+    \"description\": \"Hands-on workshop for React developers\",
+    \"venue\": \"Tech Hub Room A\",
+    \"startsAt\": \"2024-07-20T10:00:00.000Z\",
+    \"capacity\": 30,
+    \"priceCents\": 14900,
+    \"organizerId\": \"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",
+    \"createdAt\": \"2024-02-01T10:00:00.000Z\"
+  },
+  {
+    \"id\": \"33333333-3333-3333-3333-333333333333\",
+    \"title\": \"Node.js Meetup\",
+    \"description\": \"Monthly Node.js community meetup\",
+    \"venue\": \"Coffee Shop\",
+    \"startsAt\": \"2024-08-10T18:00:00.000Z\",
+    \"capacity\": 50,
+    \"priceCents\": 0,
+    \"organizerId\": \"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb\",
+    \"createdAt\": \"2024-03-01T10:00:00.000Z\"
+  },
+  {
+    \"id\": \"44444444-4444-4444-4444-444444444444\",
+    \"title\": \"TypeScript Deep Dive\",
+    \"description\": \"Advanced TypeScript patterns and best practices\",
+    \"venue\": \"Online\",
+    \"startsAt\": \"2024-09-05T14:00:00.000Z\",
+    \"capacity\": 200,
+    \"priceCents\": 9900,
+    \"organizerId\": \"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",
+    \"createdAt\": \"2024-04-01T10:00:00.000Z\"
+  }
 ]

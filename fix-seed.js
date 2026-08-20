@@ -1,0 +1,13 @@
+﻿const fs = require("fs");
+let c = fs.readFileSync("prisma/seed.ts", "utf8");
+const target = "prisma.();";
+const replacement = "prisma.$disconnect();";
+const idx = c.lastIndexOf(target);
+console.log("Target length:", target.length);
+console.log("Replacement length:", replacement.length);
+console.log("Replacement:", replacement);
+const before = c.slice(0, idx);
+const after = c.slice(idx + target.length);
+c = before + replacement + after;
+fs.writeFileSync("prisma/seed.ts", c);
+console.log("Replaced!");

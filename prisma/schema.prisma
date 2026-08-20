@@ -14,13 +14,15 @@ enum BookingStatus {
 }
 
 model User {
-  id        String        @id @default(uuid())
-  email     String        @unique
-  name      String?
-  role      String
-  createdAt DateTime      @default(now())
+  id            String        @id @default(uuid())
+  email         String        @unique
+  name          String?
+  role          String
+  passwordHash  String
+  createdAt     DateTime      @default(now())
 
-  bookings  Booking[]
+  bookings      Booking[]
+  refreshTokens RefreshToken[]
 }
 
 model Event {
@@ -48,4 +50,16 @@ model Booking {
   event     Event         @relation(fields: [eventId], references: [id])
 
   @@unique([userId, eventId])
+}
+
+model RefreshToken {
+  id            String    @id @default(uuid())
+  userId        String
+  tokenHash     String    @unique
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  replacedById  String?
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

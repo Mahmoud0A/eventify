@@ -1,5 +1,4 @@
-// Session 1: Full domain model for Eventify
-// Strict TypeScript, literal unions, no `any`, erasableSyntaxOnly
+// Domain types
 
 export type Role = "ATTENDEE" | "ORGANIZER" | "ADMIN";
 

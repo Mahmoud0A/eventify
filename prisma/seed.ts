@@ -11,6 +11,8 @@ import { getDbUrl } from "../src/config/config.ts";
 const adapter = new PrismaPg(getDbUrl());
 const prisma = new PrismaClient({ adapter });
 
+const DEFAULT_PASSWORD_HASH = "$2a$10$placeholderhashforneedstoresetpassword";
+
 async function main() {
   // --- Users ---
   const users = [];
@@ -23,8 +25,8 @@ async function main() {
 
   for (let i = 3; i < 20; i++) {
     userEmails.push({
-      email: `user-${i}@example.com`,
-      name: `User ${i}`,
+      email: "user-" + i + "@example.com",
+      name: "User " + i,
       role: "ATTENDEE",
     });
   }
@@ -37,6 +39,7 @@ async function main() {
         email: u.email,
         name: u.name,
         role: u.role,
+        passwordHash: DEFAULT_PASSWORD_HASH,
       },
     });
     users.push(user);
@@ -47,81 +50,36 @@ async function main() {
   const attendee2 = users[3]!;
 
   // --- Events ---
-  const capacityEvent = await prisma.event.create({
-    data: {
-      title: "Capacity Workshop",
-      description: "Event with capacity 5 to test concurrent bookings",
-      venue: "Main Hall",
-      startsAt: "2026-10-15T18:00:00Z",
-      capacity: 5,
-      priceCents: 0,
-      organizerId: organizer.id,
-    },
-  });
+  const eventsData = [
+    { title: "Capacity Workshop", description: "Event with capacity 5 to test concurrent bookings", venue: "Main Hall", startsAt: "2026-10-15T18:00:00Z", capacity: 5, priceCents: 0, organizerId: organizer.id },
+    { title: "JS 101", description: "JavaScript from zero ceremony", venue: "Room 4", startsAt: "2026-09-14T18:00:00Z", capacity: 30, priceCents: 0, organizerId: organizer.id },
+    { title: "TS at Work", description: "Types that earn their keep", venue: null, startsAt: "2026-09-21T18:00:00Z", capacity: 80, priceCents: 1500, organizerId: organizer.id },
+    { title: "Node Deep Dive", description: "The event loop, for real", venue: "Main Hall", startsAt: "2026-10-02T18:00:00Z", capacity: 25, priceCents: 2500, organizerId: organizer.id },
+    { title: "API Design Live", description: "Endpoints designed in the open", venue: "Main Hall", startsAt: "2026-11-20T18:00:00Z", capacity: 125, priceCents: 0, organizerId: organizer.id },
+  ];
 
-  const event1 = await prisma.event.create({
-    data: {
-      title: "JS 101",
-      description: "JavaScript from zero ceremony",
-      venue: "Room 4",
-      startsAt: "2026-09-14T18:00:00Z",
-      capacity: 30,
-      priceCents: 0,
-      organizerId: organizer.id,
-    },
-  });
+  for (const ev of eventsData) {
+    await prisma.event.upsert({
+      where: { title: ev.title },
+      create: ev,
+      update: ev,
+    });
+  }
 
-  await prisma.event.create({
-    data: {
-      title: "TS at Work",
-      description: "Types that earn their keep",
-      venue: null,
-      startsAt: "2026-09-21T18:00:00Z",
-      capacity: 80,
-      priceCents: 1500,
-      organizerId: organizer.id,
-    },
-  });
-
-  await prisma.event.create({
-    data: {
-      title: "Node Deep Dive",
-      description: "The event loop, for real",
-      venue: "Main Hall",
-      startsAt: "2026-10-02T18:00:00Z",
-      capacity: 25,
-      priceCents: 2500,
-      organizerId: organizer.id,
-    },
-  });
-
-  await prisma.event.create({
-    data: {
-      title: "API Design Live",
-      description: "Endpoints designed in the open",
-      venue: "Main Hall",
-      startsAt: "2026-11-20T18:00:00Z",
-      capacity: 125,
-      priceCents: 0,
-      organizerId: organizer.id,
-    },
-  });
+  const capacityEvent = await prisma.event.findUniqueOrThrow({ where: { title: "Capacity Workshop" } });
+  const event1 = await prisma.event.findUniqueOrThrow({ where: { title: "JS 101" } });
 
   // --- Pre-existing bookings ---
-  await prisma.booking.create({
-    data: {
-      userId: attendee1.id,
-      eventId: event1.id,
-      status: "CONFIRMED",
-    },
+  await prisma.booking.upsert({
+    where: { userId_eventId: { userId: attendee1.id, eventId: event1.id } },
+    create: { userId: attendee1.id, eventId: event1.id, status: "CONFIRMED" },
+    update: { status: "CONFIRMED" },
   });
 
-  await prisma.booking.create({
-    data: {
-      userId: attendee2.id,
-      eventId: event1.id,
-      status: "CANCELLED",
-    },
+  await prisma.booking.upsert({
+    where: { userId_eventId: { userId: attendee2.id, eventId: event1.id } },
+    create: { userId: attendee2.id, eventId: event1.id, status: "CANCELLED" },
+    update: { status: "CANCELLED" },
   });
 
   console.log("Seed completed successfully");

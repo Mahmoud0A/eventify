@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+﻿import { readFile } from "node:fs/promises";
 
 interface UserFixture {
   userId: string;
@@ -24,7 +24,7 @@ async function book(fixtures: Fixtures, userId: string): Promise<number> {
       "Content-Type": "application/json",
       "X-User-Id": userId,
     },
-    body: JSON.stringify({ eventId: fixtures.eventId }),
+    body: JSON.stringify({ userId, eventId: fixtures.eventId }),
   });
   return res.status;
 }

@@ -1,9 +1,8 @@
-import { defineConfig } from "@prisma/config";
-import { getDbUrl } from "./src/config/config.ts";
+﻿import { defineConfig } from "@prisma/config";
 
 export default defineConfig({
   datasource: {
-    url: getDbUrl(),
+    url: process.env.DATABASE_URL || "postgresql://eventify:eventify@localhost:5432/eventify",
   },
   schema: "prisma/schema.prisma",
   migrations: {

@@ -1,16 +1,16 @@
-// Config — extends env schema, reads DATABASE_URL through this module
-// Never process.env directly; always go through src/config.ts
+// Config — extends env schema
 
 import { config as dotenvConfig } from "dotenv";
 import path from "path";
 import { z } from "zod";
 
-// Load .env file from the project root
 dotenvConfig({ path: path.resolve("./.env") });
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url().optional(),
   PORT: z.string().default("3000"),
+  JWT_ACCESS_SECRET: z.string().min(32),
+  WEB_ORIGIN: z.string().url().optional(),
 });
 
 export const env = envSchema.parse(process.env);

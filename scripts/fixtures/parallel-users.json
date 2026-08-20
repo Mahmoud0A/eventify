@@ -1,27 +1,87 @@
 {
   "baseUrl": "http://localhost:3000",
-  "eventId": "cf36828c-2433-480d-9ae4-4b23fff41250",
+  "eventId": "565737d2-86e2-408d-8d5a-776418629279",
   "capacity": 5,
   "users": [
-    { "userId": "f5c68b8c-d6ba-4ad2-b6a7-30493965360b", "token": "" },
-    { "userId": "54e9bb06-f32a-4c70-ae0f-cc3d979aa993", "token": "" },
-    { "userId": "bb938b69-0361-4ce7-8cd8-42d463d834ff", "token": "" },
-    { "userId": "20fb748e-784f-4645-946c-e07b84ba2020", "token": "" },
-    { "userId": "e86d3d38-9d35-45ef-bfee-4daef8dcaf91", "token": "" },
-    { "userId": "1eee4cf1-2f2a-4fa4-aec1-b49e9b3d061e", "token": "" },
-    { "userId": "158f13da-2ab6-4158-a9a6-9913a9f3e31b", "token": "" },
-    { "userId": "5e67cb9e-4aa0-488c-847c-60539e98a530", "token": "" },
-    { "userId": "9a606b5c-14b0-406b-bce3-8196de442160", "token": "" },
-    { "userId": "44f47f57-5576-4789-9172-3609ba28a5c8", "token": "" },
-    { "userId": "4fdfbd05-856b-4a83-95c8-701a0926c3a1", "token": "" },
-    { "userId": "0e896b49-1f5c-4dca-aa3a-6c35cde30d07", "token": "" },
-    { "userId": "51e89738-07ae-40f0-9a91-2ea0d35cbbe2", "token": "" },
-    { "userId": "068d84c1-4fb3-4b89-bd2b-20a87f036889", "token": "" },
-    { "userId": "6e855b8f-5acc-423a-bc9e-cdabd5d6bd79", "token": "" },
-    { "userId": "ca870097-f1e6-42bc-be53-f05b2c3fb585", "token": "" },
-    { "userId": "db7446a2-1a6f-48d0-a031-fe348feedf1d", "token": "" },
-    { "userId": "6f1c6965-0e7e-4b02-a0cd-786bc5e6872c", "token": "" },
-    { "userId": "8f844c05-df4a-4a62-b44f-3d6b5b1ca3e9", "token": "" },
-    { "userId": "70419372-5ec1-491c-8cad-903d3725b991", "token": "" }
+    {
+      "userId": "51dbfa40-ab2b-4867-89b8-3437e5bf8ef8",
+      "token": ""
+    },
+    {
+      "userId": "ecd08f64-cea0-4403-a11d-d930bc1dceff",
+      "token": ""
+    },
+    {
+      "userId": "5052b4cd-6377-4dfc-b9fd-9503ea63abb4",
+      "token": ""
+    },
+    {
+      "userId": "5bf6ad83-3172-4af0-8926-f5890d73926a",
+      "token": ""
+    },
+    {
+      "userId": "4975c929-d3f9-4b1d-a6ea-b29a3eab06a8",
+      "token": ""
+    },
+    {
+      "userId": "cf7a35ed-0751-41af-873d-32d4b19c7c27",
+      "token": ""
+    },
+    {
+      "userId": "1df4179f-c763-402b-b64a-e741a9af2d87",
+      "token": ""
+    },
+    {
+      "userId": "25bd2cb8-7036-4fc6-a46a-09a4345ff02e",
+      "token": ""
+    },
+    {
+      "userId": "4b6dea78-bd55-4fb4-9025-efba0595302a",
+      "token": ""
+    },
+    {
+      "userId": "2d61a10a-34dc-4dc5-9f69-77b46bc2ed90",
+      "token": ""
+    },
+    {
+      "userId": "ef64a0ae-8a3a-44f3-965d-256fd4db64e0",
+      "token": ""
+    },
+    {
+      "userId": "99a4b635-55b5-4262-bdb6-32a8cd744bf1",
+      "token": ""
+    },
+    {
+      "userId": "375087ee-cf7d-4787-8556-1a5e5f4f31fe",
+      "token": ""
+    },
+    {
+      "userId": "94f987f9-997f-453d-8005-8c9272f2c926",
+      "token": ""
+    },
+    {
+      "userId": "051fa338-75cb-42f7-a99c-d6b81b6a9526",
+      "token": ""
+    },
+    {
+      "userId": "357f5840-96b6-4fbf-b9e5-93b7925e6a18",
+      "token": ""
+    },
+    {
+      "userId": "041a1d7a-210a-4410-aa8c-f876131707b0",
+      "token": ""
+    },
+    {
+      "userId": "78ffb635-2098-439f-8b77-086181d84c64",
+      "token": ""
+    },
+    {
+      "userId": "ab52c4dc-9c17-4b74-a2ce-11c34387da54",
+      "token": ""
+    },
+    {
+      "userId": "a8cbd141-ecf8-4ecf-a6aa-5d81649ff0be",
+      "token": ""
+    }
   ]
 }

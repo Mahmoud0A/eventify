@@ -1,0 +1,42 @@
+﻿// Bookings router
+
+import { Router } from "express";
+import { bookingsController } from "../bookings/bookings.controller.ts";
+import { validate } from "../middleware/validate.ts";
+import { requireAuth } from "../middleware/auth.ts";
+import { z } from "zod";
+
+const router = Router();
+
+const createBookingSchema = z.object({
+  userId: z.string().uuid(),
+  eventId: z.string().uuid(),
+});
+
+const cancelBookingSchema = z.object({
+  userId: z.string().uuid(),
+});
+
+router.post(
+  "/",
+  requireAuth,
+  validate(createBookingSchema),
+  (req, res, next) => bookingsController.create(req, res).catch(next)
+);
+
+router.get("/:id", requireAuth, (req, res, next) =>
+  bookingsController.getById(req, res).catch(next)
+);
+
+router.get("/", requireAuth, (req, res, next) =>
+  bookingsController.getAll(req, res).catch(next)
+);
+
+router.delete(
+  "/:id",
+  requireAuth,
+  validate(cancelBookingSchema),
+  (req, res, next) => bookingsController.cancel(req, res).catch(next)
+);
+
+export const bookingsRouter = router;

@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # Eventify — local infrastructure.
 # Usage:
 #   docker compose up -d            # start everything
@@ -16,10 +16,11 @@ services:
       POSTGRES_USER: eventify
       POSTGRES_PASSWORD: eventify
       POSTGRES_DB: eventify
+      PGDATA: /var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U eventify -d eventify"]
       interval: 5s
