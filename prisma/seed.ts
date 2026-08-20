@@ -8,6 +8,7 @@ import { PrismaClient } from "../.prisma/client/client.ts";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcrypt";
 import { getDbUrl } from "../src/config/config.ts";
+import { Role } from "../src/domain.ts";
 
 const adapter = new PrismaPg(getDbUrl());
 const prisma = new PrismaClient({ adapter });
@@ -19,7 +20,7 @@ const DEFAULT_PASSWORD_HASH = bcrypt.hashSync(DEFAULT_PASSWORD, 10);
 async function main() {
   // --- Users ---
   const users = [];
-  const userEmails = [
+  const userEmails: { email: string; name: string; role: Role }[] = [
     { email: "organizer@example.com", name: "Organizer", role: "ORGANIZER" },
     { email: "organizer2@example.com", name: "Organizer Two", role: "ORGANIZER" },
     { email: "admin@example.com", name: "Admin", role: "ADMIN" },

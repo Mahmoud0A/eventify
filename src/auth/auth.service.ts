@@ -6,6 +6,7 @@ import { env } from "../config/config.ts";
 import { refreshTokenRepository } from "../auth/refresh-token.repository.ts";
 import { prisma } from "../lib/prisma.ts";
 import crypto from "crypto";
+import { Role } from "../domain.ts";
 
 const BCRYPT_ROUNDS = 10;
 
@@ -30,7 +31,7 @@ export interface AuthTokens {
 }
 
 export const authService = {
-  async signup(email: string, password: string, name: string, role = "ATTENDEE"): Promise<AuthTokens> {
+  async signup(email: string, password: string, name: string, role: Role = "ATTENDEE"): Promise<AuthTokens> {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new Error("User already exists");
