@@ -76,11 +76,18 @@ export const bookingsRepository = {
 
         return result;
       } catch (error) {
-        const prismaError = error as { code: string };
+        const prismaError = error as { code?: string; message?: string };
         if (process.env.NODE_ENV === "development") {
-          console.error(`[booking-create] attempt ${attempt}/${maxRetries} failed:`, JSON.stringify({ code: prismaError.code, message: (error as Error).message }));
+          console.error(`[booking-create] attempt ${attempt}/${maxRetries} failed:`, JSON.stringify({ code: prismaError.code, message: prismaError.message }));
         }
-        if (prismaError.code === "P2034" && attempt < maxRetries) {
+        // Serializable isolation makes concurrent bookings abort with a write
+        // conflict. Prisma wraps these as P2034, but @prisma/adapter-pg can also
+        // surface a raw `TransactionWriteConflict` error with no `.code`, so we
+        // detect both and retry the whole transaction a bounded number of times.
+        const isSerializationFailure =
+          prismaError.code === "P2034" ||
+          /TransactionWriteConflict|write conflict|serialization|deadlock/i.test(prismaError.message ?? "");
+        if (isSerializationFailure && attempt < maxRetries) {
           await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
           continue;
         }
