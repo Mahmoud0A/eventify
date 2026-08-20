@@ -3,6 +3,7 @@
 import { Router } from "express";
 import { eventsController } from "../events/events.controller.ts";
 import { validateQuery } from "../middleware/validateQuery.ts";
+import { validate } from "../middleware/validate.ts";
 import { requireAuth, requireRole } from "../middleware/auth.ts";
 import { z } from "zod";
 
@@ -16,26 +17,22 @@ const eventQuerySchema = z.object({
   to: z.string().datetime().optional(),
 });
 
-const eventCreateSchema = z.object({
+const eventCreateSchema = z.strictObject({
   title: z.string().min(1).max(200),
   description: z.string().optional(),
-  venue: z.string().optional(),
+  venue: z.string().nullable().optional(),
   startsAt: z.string().datetime(),
   capacity: z.number().int().positive(),
   priceCents: z.number().int().nonnegative(),
 });
 
-const eventUpdateSchema = z.object({
+const eventUpdateSchema = z.strictObject({
   title: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
-  venue: z.string().optional(),
+  venue: z.string().nullable().optional(),
   startsAt: z.string().datetime().optional(),
   capacity: z.number().int().positive().optional(),
   priceCents: z.number().int().nonnegative().optional(),
-});
-
-router.get("/health", (_req, res) => {
-  res.json({ status: "ok", uptime: process.uptime() });
 });
 
 router.get("/", validateQuery(eventQuerySchema), (req, res, next) =>
@@ -47,21 +44,23 @@ router.get("/:id", (req, res, next) =>
 );
 
 router.post(
-  "/events",
+  "/",
   requireAuth,
   requireRole("ORGANIZER", "ADMIN"),
+  validate(eventCreateSchema),
   (req, res, next) => eventsController.create(req, res).catch(next)
 );
 
 router.patch(
-  "/events/:id",
+  "/:id",
   requireAuth,
   requireRole("ORGANIZER", "ADMIN"),
+  validate(eventUpdateSchema),
   (req, res, next) => eventsController.update(req, res).catch(next)
 );
 
 router.delete(
-  "/events/:id",
+  "/:id",
   requireAuth,
   requireRole("ORGANIZER", "ADMIN"),
   (req, res, next) => eventsController.delete(req, res).catch(next)

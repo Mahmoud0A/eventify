@@ -7,15 +7,15 @@ import { z } from "zod";
 
 const router = Router();
 
-const signupSchema = z.object({
-  email: z.string().email(),
+const signupSchema = z.strictObject({
+  email: z.email(),
   password: z.string().min(8),
   name: z.string().min(1).max(100),
   role: z.enum(["ATTENDEE", "ORGANIZER", "ADMIN"]).default("ATTENDEE"),
 });
 
-const loginSchema = z.object({
-  email: z.string().email(),
+const loginSchema = z.strictObject({
+  email: z.email(),
   password: z.string().min(1),
 });
 

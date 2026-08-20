@@ -1,6 +1,6 @@
 // Eventify — Sessions 1–4
 
-import express, { Request, Response, NextFunction } from "express";
+import express, { Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "./middleware/error.ts";
 import { eventsRouter } from "./events/events.router.ts";

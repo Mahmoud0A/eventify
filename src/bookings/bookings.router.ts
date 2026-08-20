@@ -8,13 +8,8 @@ import { z } from "zod";
 
 const router = Router();
 
-const createBookingSchema = z.object({
-  userId: z.string().uuid(),
+const createBookingSchema = z.strictObject({
   eventId: z.string().uuid(),
-});
-
-const cancelBookingSchema = z.object({
-  userId: z.string().uuid(),
 });
 
 router.post(
@@ -35,7 +30,6 @@ router.get("/", requireAuth, (req, res, next) =>
 router.delete(
   "/:id",
   requireAuth,
-  validate(cancelBookingSchema),
   (req, res, next) => bookingsController.cancel(req, res).catch(next)
 );
 

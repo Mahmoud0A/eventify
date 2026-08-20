@@ -21,12 +21,15 @@ function generateToken(): string {
 }
 
 export const refreshTokenRepository = {
-  async create(userId: string, expiresInDays = 30): Promise<{ token: string; tokenHash: string; expiresAt: Date }> {
+  async create(
+    userId: string,
+    expiresInDays = 30
+  ): Promise<{ token: string; tokenHash: string; tokenId: string; expiresAt: Date }> {
     const token = generateToken();
     const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
 
-    await prisma.refreshToken.create({
+    const created = await prisma.refreshToken.create({
       data: {
         userId,
         tokenHash,
@@ -34,7 +37,7 @@ export const refreshTokenRepository = {
       },
     });
 
-    return { token, tokenHash, expiresAt };
+    return { token, tokenHash, tokenId: created.id, expiresAt };
   },
 
   async findByHash(tokenHash: string): Promise<RefreshToken | null> {
@@ -60,19 +63,19 @@ export const refreshTokenRepository = {
     const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
 
     await prisma.$transaction(async (tx) => {
-      await tx.refreshToken.update({
-        where: { tokenHash: oldTokenHash },
-        data: {
-          revokedAt: new Date(),
-          replacedById: newTokenHash,
-        },
-      });
-
-      await tx.refreshToken.create({
+      const created = await tx.refreshToken.create({
         data: {
           userId: newUserId,
           tokenHash: newTokenHash,
           expiresAt,
+        },
+      });
+
+      await tx.refreshToken.update({
+        where: { tokenHash: oldTokenHash },
+        data: {
+          revokedAt: new Date(),
+          replacedById: created.id,
         },
       });
     });

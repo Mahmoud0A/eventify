@@ -11,6 +11,7 @@ const envSchema = z.object({
   PORT: z.string().default("3000"),
   JWT_ACCESS_SECRET: z.string().min(32),
   WEB_ORIGIN: z.string().url().optional(),
+  TEST_AUTH_ENABLED: z.enum(["true", "false"]).default("false"),
 });
 
 export const env = envSchema.parse(process.env);

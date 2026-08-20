@@ -1,7 +1,7 @@
 // Auth controller
 
 import { Request, Response } from "express";
-import { authService, AuthTokens } from "../auth/auth.service.ts";
+import { authService } from "../auth/auth.service.ts";
 import { AppError } from "../middleware/error.ts";
 
 function setRefreshCookie(res: Response, token: string): void {

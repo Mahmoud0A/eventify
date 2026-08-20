@@ -6,8 +6,8 @@ import { AppError } from "../middleware/error.ts";
 
 export const bookingsController = {
   async create(req: Request, res: Response): Promise<void> {
-    const { userId, eventId } = req.body;
-    const result = await bookingsService.create(userId, eventId);
+    const { eventId } = req.body;
+    const result = await bookingsService.create(req.auth!.sub, eventId);
     if (result.status !== 201) {
       throw new AppError(result.status, result.message ?? "Booking failed");
     }
@@ -28,10 +28,12 @@ export const bookingsController = {
   },
 
   async cancel(req: Request, res: Response): Promise<void> {
-    const { userId } = req.body;
-    const result = await bookingsService.cancel(req.params.id as string, userId);
+    const result = await bookingsService.cancel(req.params.id as string, req.auth!.sub);
     if (result.status === 404) {
       throw new AppError(404, "Booking not found");
+    }
+    if (result.status === 403) {
+      throw new AppError(403, "Not authorized to cancel this booking");
     }
     res.json(result.booking);
   },

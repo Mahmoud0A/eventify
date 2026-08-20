@@ -16,8 +16,7 @@ export const bookingsRepository = {
     userId: string,
     eventId: string
   ): Promise<{ booking: Booking | null; status: number; message?: string }> {
-    const maxRetries = 3;
-    let lastError: unknown;
+    const maxRetries = 8;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -77,16 +76,21 @@ export const bookingsRepository = {
 
         return result;
       } catch (error) {
-        lastError = error;
         const prismaError = error as { code: string };
+        if (process.env.NODE_ENV === "development") {
+          console.error(`[booking-create] attempt ${attempt}/${maxRetries} failed:`, JSON.stringify({ code: prismaError.code, message: (error as Error).message }));
+        }
         if (prismaError.code === "P2034" && attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
           continue;
         }
         return {
           booking: null,
           status: prismaError.code === "P2002" ? 409 : 500,
-          message: prismaError.code === "P2002" ? "Duplicate booking for this user and event" : "Internal server error",
+          message:
+            prismaError.code === "P2002"
+              ? "Duplicate booking for this user and event"
+              : `Internal server error (${prismaError.code})`,
         };
       }
     }
@@ -109,8 +113,11 @@ export const bookingsRepository = {
     try {
       const existing = await prisma.booking.findUnique({ where: { id } });
 
-      if (!existing || existing.userId !== userId) {
+      if (!existing) {
         return { booking: null, status: 404 };
+      }
+      if (existing.userId !== userId) {
+        return { booking: null, status: 403 };
       }
 
       const booking = await prisma.booking.update({
@@ -119,7 +126,7 @@ export const bookingsRepository = {
       });
 
       return { booking: toBookingStringDates(booking), status: 200 };
-    } catch (error) {
+    } catch {
       return { booking: null, status: 500 };
     }
   },
