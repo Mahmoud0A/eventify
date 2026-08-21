@@ -23,7 +23,7 @@ function generateToken(): string {
 export const refreshTokenRepository = {
   async create(
     userId: string,
-    expiresInDays = 30
+    expiresInDays = 7
   ): Promise<{ token: string; tokenHash: string; tokenId: string; expiresAt: Date }> {
     const token = generateToken();
     const tokenHash = hashToken(token);
@@ -56,7 +56,7 @@ export const refreshTokenRepository = {
   async revokeAndReplace(
     oldTokenHash: string,
     newUserId: string,
-    expiresInDays = 30
+    expiresInDays = 7
   ): Promise<{ token: string; tokenHash: string; expiresAt: Date }> {
     const newToken = generateToken();
     const newTokenHash = hashToken(newToken);
