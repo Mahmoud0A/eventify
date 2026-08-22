@@ -30,6 +30,17 @@ export function requireAuth(
   res: Response,
   next: NextFunction
 ): void {
+  // TEST-ONLY bypass: lets the Session-3 concurrency script (scripts/parallel-bookings.ts)
+  // identify distinct users without a real JWT. Disabled by default — only active when
+  // TEST_AUTH_ENABLED=true in the environment. NEVER enable this in production.
+  if (env.TEST_AUTH_ENABLED === "true") {
+    const testUserId = req.headers["x-user-id"];
+    if (typeof testUserId === "string" && !req.headers.authorization) {
+      req.auth = { sub: testUserId, role: "ATTENDEE" };
+      next();
+      return;
+    }
+  }
 
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
