@@ -68,6 +68,12 @@ export const authService = {
       throw new Error("Invalid refresh token");
     }
 
+    // Reuse of a rotated/revoked token is a theft signal — revoke the whole family.
+    if (stored.revokedAt) {
+      if (stored.replacedById) {
+        await refreshTokenRepository.revokeAllForUser(stored.userId);
+      }
+      throw new Error("Token reuse detected");
     }
 
     if (stored.expiresAt < new Date()) {
