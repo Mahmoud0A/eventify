@@ -15,15 +15,14 @@ export const bookingsController = {
   },
 
   async getById(req: Request, res: Response): Promise<void> {
-    const booking = await bookingsService.getById(req.params.id as string);
-    if (!booking) {
-      throw new AppError(404, "Booking not found");
-    }
-    res.json(booking);
+    const result = await bookingsService.getById(req.params.id as string, req.auth!.sub, req.auth!.role);
+    if (result.status === 404) throw new AppError(404, "Booking not found");
+    if (result.status === 403) throw new AppError(403, "Not authorized to access this booking");
+    res.json(result.booking);
   },
 
   async getAll(req: Request, res: Response): Promise<void> {
-    const bookings = await bookingsService.getAll();
+    const bookings = await bookingsService.getAll(req.auth!.sub, req.auth!.role);
     res.json(bookings);
   },
 

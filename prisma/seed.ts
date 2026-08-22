@@ -1,8 +1,8 @@
 // Seed script for Eventify — Session 3
 // Idempotent — runs twice without errors or duplicates
-// Creates: 21 users (two ORGANIZERs, one ADMIN, attendees),
-//          6 events, and some pre-existing bookings
-// Plus: 20 distinct users and one capacity-5 event for task-2 script
+// Creates: 20 users (two ORGANIZERs, one ADMIN, 17 attendees),
+//          5 events, and some pre-existing bookings
+// Plus: 20 distinct users and one capacity-5 event for task-2 script (same 20)
 
 import { PrismaClient } from "../.prisma/client/client.ts";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -28,7 +28,7 @@ async function main() {
     { email: "attendee2@example.com", name: "Attendee Two", role: "ATTENDEE" },
   ];
 
-  for (let i = 3; i < 20; i++) {
+  for (let i = 3; i < 18; i++) {
     userEmails.push({
       email: "user-" + i + "@example.com",
       name: "User " + i,

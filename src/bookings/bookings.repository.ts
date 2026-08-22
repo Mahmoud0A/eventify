@@ -116,6 +116,11 @@ export const bookingsRepository = {
     return bookings.map(toBookingStringDates);
   },
 
+  async findByUserId(userId: string): Promise<Booking[]> {
+    const bookings = await prisma.booking.findMany({ where: { userId }, orderBy: { createdAt: "desc" } });
+    return bookings.map(toBookingStringDates);
+  },
+
   async cancel(id: string, userId: string): Promise<{ booking: Booking | null; status: number }> {
     try {
       const existing = await prisma.booking.findUnique({ where: { id } });

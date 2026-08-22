@@ -11,12 +11,18 @@ export const bookingsService = {
     return bookingsRepository.create(userId, eventId);
   },
 
-  async getById(id: string): Promise<Booking | null> {
-    return bookingsRepository.findById(id);
+  async getById(id: string, requesterId: string, role: string): Promise<{ booking: Booking | null; status: number }> {
+    const booking = await bookingsRepository.findById(id);
+    if (!booking) return { booking: null, status: 404 };
+    if (role !== "ADMIN" && booking.userId !== requesterId) {
+      return { booking: null, status: 403 };
+    }
+    return { booking, status: 200 };
   },
 
-  async getAll(): Promise<Booking[]> {
-    return bookingsRepository.findAll();
+  async getAll(requesterId: string, role: string): Promise<Booking[]> {
+    if (role === "ADMIN") return bookingsRepository.findAll();
+    return bookingsRepository.findByUserId(requesterId);
   },
 
   async cancel(

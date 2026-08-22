@@ -19,9 +19,9 @@
 - [x] All `/events` endpoints on Postgres via Prisma repositories
 - [x] Transactional booking service (`Serializable` + retry on P2034)
 - [x] Rebooking-after-cancel + P2002→409 mapping
-- [x] Seed script: organizers, admin, attendees, events, bookings + 20 users for parallel script
-- [x] `scripts/parallel-bookings.ts` + `scripts/fixtures/parallel-users.json`
-- [ ] Prove index with EXPLAIN ANALYZE (needs live DB)
+- [x] Seed script: organizers, admin, attendees, events, bookings + 20 users for parallel script (idempotent, fresh IDs logged)
+- [x] `scripts/parallel-bookings.ts` + `scripts/fixtures/parallel-users.json` (verified 5×201 / 15×409)
+- [x] Prove index with EXPLAIN ANALYZE — see PR_DESCRIPTIONS.md Session 3 (Index Scan via Booking_userId_eventId_key)
 
 ## Session 4: Locking Eventify Down
 - [x] `requireAuth` / `requireRole` on all mutating routes

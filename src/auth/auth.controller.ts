@@ -10,7 +10,7 @@ function setRefreshCookie(res: Response, token: string): void {
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/v1/auth/refresh",
-    maxAge: 30 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 

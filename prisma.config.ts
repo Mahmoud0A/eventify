@@ -3,7 +3,7 @@ import "dotenv/config";
 
 export default defineConfig({
   datasource: {
-    url: process.env.DATABASE_URL || "postgresql://eventify:eventify@localhost:5433/eventify",
+    url: process.env.DATABASE_URL || "postgresql://eventify:eventify@localhost:5432/eventify",
   },
   schema: "prisma/schema.prisma",
   migrations: {
