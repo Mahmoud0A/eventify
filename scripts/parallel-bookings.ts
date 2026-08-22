@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+﻿import { readFile } from "node:fs/promises";
 
 interface UserFixture {
   userId: string;
@@ -17,7 +17,7 @@ async function loadFixtures(): Promise<Fixtures> {
   return JSON.parse(raw) as Fixtures;
 }
 
-async function book(fixtures: Fixtures, userId: string): Promise<number> {
+async function book(fixtures: Fixtures, userId: string): Promise<{ status: number; body: string }> {
   const res = await fetch(`${fixtures.baseUrl}/v1/bookings`, {
     method: "POST",
     headers: {
@@ -26,7 +26,7 @@ async function book(fixtures: Fixtures, userId: string): Promise<number> {
     },
     body: JSON.stringify({ eventId: fixtures.eventId }),
   });
-  return res.status;
+  return { status: res.status, body: await res.text() };
 }
 
 async function main() {
@@ -37,13 +37,17 @@ async function main() {
     process.exit(1);
   }
 
-  const results = await Promise.all(
+const results = await Promise.all(
     fixtures.users.map((u) => book(fixtures, u.userId))
   );
 
   const tally: Record<number, number> = {};
-  for (const status of results) {
-    tally[status] = (tally[status] || 0) + 1;
+  for (const r of results) {
+    tally[r.status] = (tally[r.status] || 0) + 1;
+  }
+
+  for (const r of results) {
+    if (r.status === 500) console.log("500 body:", r.body);
   }
 
   console.log("Status tally:", tally);

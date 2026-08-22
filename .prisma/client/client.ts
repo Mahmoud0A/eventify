@@ -56,3 +56,8 @@ export type Event = Prisma.EventModel
  * 
  */
 export type Booking = Prisma.BookingModel
+/**
+ * Model RefreshToken
+ * 
+ */
+export type RefreshToken = Prisma.RefreshTokenModel
