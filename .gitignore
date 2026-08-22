@@ -3,3 +3,11 @@ dist/
 .env
 coverage/
 .DS_Store
+*.log
+boot*.out
+boot*.err
+.prisma/
+.serena/
+setup-and-run.ps1
+cj.txt
+cj2.txt
