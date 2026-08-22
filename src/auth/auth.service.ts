@@ -68,8 +68,6 @@ export const authService = {
       throw new Error("Invalid refresh token");
     }
 
-    }
-
     if (stored.expiresAt < new Date()) {
       throw new Error("Invalid refresh token");
     }
