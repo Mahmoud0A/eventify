@@ -3,6 +3,7 @@
 import { Prisma } from "../generated/prisma.ts";
 import { prisma } from "../lib/prisma.ts";
 import { Booking } from "../domain.ts";
+import { addWaitlistPromoteJob } from "../jobs/waitlist.queue.ts";
 
 function toBookingStringDates(booking: Prisma.BookingModel): Booking {
   return {
@@ -37,7 +38,11 @@ export const bookingsRepository = {
                   where: { eventId, status: "CONFIRMED" },
                 });
                 if (confirmedCount >= event.capacity) {
-                  return { booking: null, status: 409, message: "Event at capacity" };
+                  const waitlisted = await tx.booking.update({
+                    where: { id: existing.id },
+                    data: { status: "WAITLISTED" },
+                  });
+                  return { booking: toBookingStringDates(waitlisted), status: 201 };
                 }
 
                 const updated = await tx.booking.update({
@@ -49,6 +54,9 @@ export const bookingsRepository = {
               if (existing.status === "CONFIRMED") {
                 return { booking: null, status: 409, message: "Duplicate booking" };
               }
+              if (existing.status === "WAITLISTED") {
+                return { booking: null, status: 409, message: "Already on waitlist" };
+              }
               return { booking: null, status: 409, message: "Booking already exists" };
             }
 
@@ -56,7 +64,14 @@ export const bookingsRepository = {
               where: { eventId, status: "CONFIRMED" },
             });
             if (confirmedCount >= event.capacity) {
-              return { booking: null, status: 409, message: "Event at capacity" };
+              const waitlisted = await tx.booking.create({
+                data: {
+                  userId,
+                  eventId,
+                  status: "WAITLISTED",
+                },
+              });
+              return { booking: toBookingStringDates(waitlisted), status: 201 };
             }
 
             const booking = await tx.booking.create({
@@ -132,10 +147,17 @@ export const bookingsRepository = {
         return { booking: null, status: 403 };
       }
 
+      const wasConfirmed = existing.status === "CONFIRMED";
+      const eventId = existing.eventId;
+
       const booking = await prisma.booking.update({
         where: { id },
         data: { status: "CANCELLED" },
       });
+
+      if (wasConfirmed) {
+        await addWaitlistPromoteJob({ eventId });
+      }
 
       return { booking: toBookingStringDates(booking), status: 200 };
     } catch {
