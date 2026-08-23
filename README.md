@@ -2,7 +2,7 @@
 
 Eventify is a production-style event booking API built progressively across six course sessions: an Express + TypeScript core with transactional Postgres bookings, JWT auth with refresh-token rotation, Redis-backed caching / rate limiting / queues, and a separate background worker — containerized, CI-tested, and deployment-ready.
 
-**Live URL:** _pending first deployment — will be added here once Render/Neon/Upstash are provisioned. No live environment exists yet._
+**Live URL: <https://eventify-capstone.onrender.com>** — Render Free-tier Web Service (Docker), API-only. Verified live: `/health` 200, registration, login, event discovery, and a CONFIRMED booking against the seeded catalog (see *Deployment* below).
 
 ---
 
@@ -124,9 +124,17 @@ GitHub Actions (`.github/workflows/ci.yml`) on every push to `session-*`/`main` 
 
 Branch protection on `main` is enabled and requires both checks — `typecheck-and-lint` and `test` — before merging (strict: branches must be up to date).
 
-## Deployment (planned — not deployed)
+## Deployment (live)
 
-Target stack: **Render** (API from this Dockerfile; optional paid Background Worker) + **Neon Postgres** + **Upstash Redis**. Full step-by-step instructions, required dashboard variables, `preDeployCommand: npx prisma migrate deploy`, seeding, and free-tier/cold-start trade-offs are documented in [`docs/deployment.md`](docs/deployment.md). Accounts are not provisioned yet; nothing in this README claims a live deployment.
+Deployed on **Render Free** at <https://eventify-capstone.onrender.com> from branch `session-6/capstone-eventify-v1`:
+
+- **API:** Render Web Service running the production Docker image (`node --import tsx src/server.ts`), `NODE_ENV=production`.
+- **Database:** Neon PostgreSQL — schema applied via `npx prisma migrate deploy` run manually against the production URL, because **Render Free does not offer Pre-Deploy Commands**.
+- **Redis:** Upstash — used by the cache and rate limiters in production (every rate-limited login and cached event read exercises it).
+- **Worker:** not deployed. Render's free tier has no background workers, so waitlist promotions and confirmation emails remain queued until a worker service is added. This is the documented API-only trade-off.
+- **Demo data:** seeded catalog verified live via `GET /v1/events` (e.g., *JS 101* capacity 30, future date); demo accounts exist from the seed script.
+
+Live verification performed (2026-08-23): `/health` → 200; attendee signup → 201; login → JWT; open-event discovery; booking → **201 CONFIRMED**; persisted-booking re-read with correct ownership; anonymous booking rejected 401; browser-level check of `/health` via Playwright. Full details in [`docs/deployment.md`](docs/deployment.md).
 
 ## Decisions & trade-offs
 

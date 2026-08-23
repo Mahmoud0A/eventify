@@ -32,14 +32,14 @@ Title: `capstone: Eventify v1.0`
 
 ## E. Deployment preparation (accounts are user-manual actions)
 - [x] Repository-side deployment documentation (`docs/deployment.md`: Render API service, optional paid worker, Neon Postgres, Upstash Redis, env vars, `npx prisma migrate deploy`, seeding, free-tier/cold-start trade-offs)
-- [ ] Render account + API service actually provisioned (manual — pending)
-- [ ] Render worker service provisioned, or free-tier limitation accepted and documented as such (manual decision — pending)
-- [ ] Neon Postgres instance created + connection string wired (manual — pending)
-- [ ] Upstash Redis instance created + `REDIS_URL` wired (manual — pending)
-- [ ] `npx prisma migrate deploy` executed against the real production database (pending — requires D+E)
-- [ ] Seed/demo data loaded into production so grading accounts/events exist (pending — requires D+E)
-- [ ] Live `/health` verified at the deployed URL (pending — no URL exists yet)
-- [ ] Live booking flow executed against the deployment (pending)
+- [x] Render account + API service provisioned — live at <https://eventify-capstone.onrender.com> (Render Free Web Service, Docker, branch `session-6/capstone-eventify-v1`)
+- [ ] Render worker service provisioned — **NOT deployed** (free-tier limitation); documented API-only trade-off stands: background jobs queue until a paid worker exists
+- [x] Neon Postgres instance created + wired (`DATABASE_URL` via dashboard); migrations applied manually with `npx prisma migrate deploy` (Render Free has no Pre-Deploy Commands)
+- [x] Upstash Redis instance created + wired (`REDIS_URL` via dashboard; exercised in production by rate-limited logins and cached event reads)
+- [x] `npx prisma migrate deploy` executed against the real production database
+- [x] Seed/demo data loaded into production — verified via public API: 5 seeded future events incl. open ones (*JS 101* cap 30, *API Design Live* cap 125)
+- [x] Live `/health` verified — HTTP 200 `{"status":"ok"}` (HTTP + Playwright/Chromium)
+- [x] Live booking flow executed and verified — signup → login → discover open event → **201 CONFIRMED** → persisted re-read (ownership/eventId/status) → anonymous booking rejected 401
 
 ## F. Documentation & delivery
 - [x] README rewrite: portfolio-grade (pitch, architecture, endpoints, quickstart, Docker workflow, env table, testing, CI, deployment, decisions/trade-offs, AI usage)
@@ -47,5 +47,5 @@ Title: `capstone: Eventify v1.0`
 - [x] PR description draft (`docs/pr-description-session-6.md`)
 - [x] Final gates: `npm run typecheck`, `npm run lint`, `npm test`, `docker build`, `docker compose config` all green
 
-## Explicitly out of scope / pending user action
-- Render/Neon/Upstash account creation and any live deployment verification (manual; nothing is claimed as deployed until a live URL responds)
+## Explicitly out of scope / remaining manual item
+- Render **paid Background Worker** (would enable production waitlist promotions + confirmation emails). Everything else is deployed and live-verified as of 2026-08-23.
