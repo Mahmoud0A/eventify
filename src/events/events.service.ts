@@ -1,53 +1,60 @@
-import { Prisma } from "../generated/prisma.ts";
-import { prisma } from "../lib/prisma.ts";
+// Events service — business logic layer
+
+import { eventsRepository } from "../events/events.repository.ts";
 import { Event } from "../domain.ts";
-import type { EventWhereInput } from "../generated/prisma.ts";
+import { AppError } from "../middleware/error.ts";
 
-function toEventStringDates(event: Prisma.EventModel): Event {
-  return {
-    ...event,
-    description: event.description ?? "",
-    startsAt: event.startsAt.toISOString(),
-    createdAt: event.createdAt.toISOString(),
-  };
-}
+export const eventsService = {
+  async getAll(filters?: {
+    venue?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: Event[]; page: number; limit: number; total: number }> {
+    return eventsRepository.findAll(filters);
+  },
 
-export async function findEvents(filters?: {
-  venue?: string;
-  from?: string;
-  to?: string;
-  page?: number;
-  limit?: number;
-}): Promise<{ data: Event[]; page: number; limit: number; total: number }> {
-  const where: EventWhereInput = {};
+  async getById(id: string): Promise<Event | null> {
+    return eventsRepository.findById(id);
+  },
 
-  if (filters?.venue) {
-    where.venue = filters.venue;
-  }
-  if (filters?.from || filters?.to) {
-    where.startsAt = {};
-    if (filters.from) {
-      where.startsAt.gte = filters.from;
+  async create(
+    data: Omit<Event, "id" | "createdAt">,
+    organizerId: string
+  ): Promise<Event> {
+    return eventsRepository.create({
+      ...data,
+      organizerId,
+      createdAt: new Date().toISOString(),
+    });
+  },
+
+  async update(
+    id: string,
+    data: Partial<Event>,
+    userId: string,
+    role: string
+  ): Promise<Event | null> {
+    const event = await eventsRepository.findById(id);
+    if (!event) return null;
+
+    if (role !== "ADMIN" && event.organizerId !== userId) {
+      throw new AppError(403, "Not authorized to update this event");
     }
-    if (filters.to) {
-      where.startsAt.lte = filters.to;
+
+    return eventsRepository.update(id, data);
+  },
+
+  async delete(id: string, userId: string, role: string): Promise<boolean> {
+    const event = await eventsRepository.findById(id);
+    if (!event) return false;
+
+    if (role !== "ADMIN" && event.organizerId !== userId) {
+      throw new AppError(403, "Not authorized to delete this event");
     }
-  }
 
-  const page = filters?.page ?? 1;
-  const limit = filters?.limit ?? 20;
-  const skip = (page - 1) * limit;
-
-  const [data, total] = await Promise.all([
-    prisma.event.findMany({ where, skip, take: limit, orderBy: { startsAt: "asc" } }),
-    prisma.event.count({ where }),
-  ]);
-
-  return { data: data.map(toEventStringDates), page, limit, total };
-}
-
-export async function findEventById(id: string): Promise<Event | null> {
-  const event = await prisma.event.findUnique({ where: { id } });
-  if (!event) return null;
-  return toEventStringDates(event);
-}
+    await eventsRepository.delete(id);
+    return true;
+  },
+};
