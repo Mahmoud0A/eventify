@@ -30,5 +30,5 @@
 
     "outDir": "dist"
   },
-  "include": ["src", "prisma", ".prisma"]
+  "include": ["src", "prisma", ".prisma", "tests", "vitest.config.ts", "vitest.setup.ts"]
 }

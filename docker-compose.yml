@@ -1,10 +1,13 @@
 ﻿# =============================================================================
-# Eventify — local infrastructure.
+# Eventify — local infrastructure + application stack.
 # Usage:
-#   docker compose up -d            # start everything
+#   docker compose up -d            # start everything (db, redis, api, worker)
 #   docker compose ps               # is it healthy?
 #   docker compose down             # stop (data kept)
 #   docker compose down -v          # stop AND wipe data
+#
+# The `postgres` service is the project's database ("db") and keeps its
+# historical service name; api/worker reach it at host `postgres:5432`.
 # =============================================================================
 
 name: eventify
@@ -36,6 +39,50 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # Shared production image: built once, used by both api and worker.
+  api:
+    build: .
+    image: eventify-app:latest
+    init: true
+    ports:
+      - "${API_HOST_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://eventify:eventify@postgres:5432/eventify
+      REDIS_URL: redis://redis:6379/1
+      # Local-stack default only — real deployments inject this via dashboard.
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-compose-default-secret-change-me-at-least-32-chars}
+      WEB_ORIGIN: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    image: eventify-app:latest
+    init: true
+    command: ["node", "--import", "tsx", "src/worker.ts"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://eventify:eventify@postgres:5432/eventify
+      REDIS_URL: redis://redis:6379/1
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-compose-default-secret-change-me-at-least-32-chars}
+      WEB_ORIGIN: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata:

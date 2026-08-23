@@ -3,6 +3,7 @@
 import { Router } from "express";
 import { authController } from "../auth/auth.controller.ts";
 import { validate } from "../middleware/validate.ts";
+import { loginRateLimiter } from "../middleware/rateLimit.ts";
 import { z } from "zod";
 
 const router = Router();
@@ -23,7 +24,7 @@ router.post("/signup", validate(signupSchema), (req, res, next) =>
   authController.signup(req, res).catch(next)
 );
 
-router.post("/login", validate(loginSchema), (req, res, next) =>
+router.post("/login", loginRateLimiter, validate(loginSchema), (req, res, next) =>
   authController.login(req, res).catch(next)
 );
 

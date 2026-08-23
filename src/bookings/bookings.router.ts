@@ -4,6 +4,7 @@ import { Router } from "express";
 import { bookingsController } from "../bookings/bookings.controller.ts";
 import { validate } from "../middleware/validate.ts";
 import { requireAuth } from "../middleware/auth.ts";
+import { bookingRateLimiter } from "../middleware/rateLimit.ts";
 import { z } from "zod";
 
 const router = Router();
@@ -15,6 +16,7 @@ const createBookingSchema = z.strictObject({
 router.post(
   "/",
   requireAuth,
+  bookingRateLimiter,
   validate(createBookingSchema),
   (req, res, next) => bookingsController.create(req, res).catch(next)
 );

@@ -12,6 +12,7 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32),
   WEB_ORIGIN: z.string().url().optional(),
   TEST_AUTH_ENABLED: z.enum(["true", "false"]).default("false"),
+  REDIS_URL: z.string().url().default("redis://localhost:6379"),
 });
 
 export const env = envSchema.parse(process.env);
