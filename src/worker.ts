@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { getBullRedisClient } from "./infra/queue-backend.ts";
+import { getBullRedisClient, closeBullRedisClients } from "./infra/queue-backend.ts";
 import { WAITLIST_PROMOTE_QUEUE_NAME, waitlistPromoteQueueEvents } from "./jobs/waitlist.queue.ts";
 import { EMAIL_QUEUE_NAME, emailQueueEvents } from "./jobs/email.queue.ts";
 import { prisma } from "./lib/prisma.ts";
@@ -108,17 +108,32 @@ emailWorker.on("failed", (job, err) => {
   console.error(`[worker] Email job ${job?.id} failed:`, err);
 });
 
+let shuttingDown = false;
+
 async function shutdown(): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
   console.log("[worker] Shutting down...");
-  await waitlistWorker.close();
-  await emailWorker.close();
-  await waitlistPromoteQueueEvents.close();
-  await emailQueueEvents.close();
+
+  const forceExit = setTimeout(() => {
+    console.error("[worker] forced exit after timeout");
+    process.exit(1);
+  }, 10_000);
+  forceExit.unref();
+
+  await waitlistWorker.close().catch(() => undefined);
+  await emailWorker.close().catch(() => undefined);
+  await waitlistPromoteQueueEvents.close().catch(() => undefined);
+  await emailQueueEvents.close().catch(() => undefined);
+  await closeBullRedisClients().catch(() => undefined);
+  await prisma.$disconnect().catch(() => undefined);
+
+  console.log("[worker] shutdown complete");
   process.exit(0);
 }
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => void shutdown());
+process.on("SIGTERM", () => void shutdown());
 
 console.log("[worker] Started - waiting for jobs...");
 console.log(`[worker] Listening on queues: ${WAITLIST_PROMOTE_QUEUE_NAME}, ${EMAIL_QUEUE_NAME}`);

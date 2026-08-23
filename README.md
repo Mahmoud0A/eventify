@@ -1,137 +1,154 @@
-# Eventify
+# Eventify — Event Booking API (v1.0 Capstone)
 
-The event booking API built across Sessions 1–4 of the backend course. One progressive project, one repo — each session adds to the last.
+Eventify is a production-style event booking API built progressively across six course sessions: an Express + TypeScript core with transactional Postgres bookings, JWT auth with refresh-token rotation, Redis-backed caching / rate limiting / queues, and a separate background worker — containerized, CI-tested, and deployment-ready.
 
-## Prerequisites
+**Live URL:** _pending first deployment — will be added here once Render/Neon/Upstash are provisioned. No live environment exists yet._
 
-- **Node 24.x** (`node --version` must print `v24`)
-- **npm 11** (`npm --version`)
-- **Docker Desktop** (PostgreSQL 18 + Redis 8)
-- On **Windows**, `netsh` reserves `5433–5532` — the default `5432` may be occupied by a local PostgreSQL service. If `docker compose up -d` fails with `ports are not available` on `5432`, either stop the local `postgresql-x64-18` service or change the host port to `6000` in `docker-compose.yml` and `DATABASE_URL` in `.env` (see `setup-and-run.ps1`).
+---
 
-## Quick start (fresh clone)
+## Architecture
+
+```
+                ┌─────────────────────────────┐
+  clients ────▶ │  API (Express, node+tsx)    │────▶ PostgreSQL 18 (Prisma 7)
+                │  src/app.ts · src/server.ts │        users · events · bookings
+                └────────┬─────────┬──────────┘        refresh_tokens
+              enqueue    │         │ cache-aside,
+              jobs       ▼         ▼ rate limiting
+                ┌─────────────────────────────┐
+                │  Redis 8                    │
+                │  db0 dev · db1 tests        │
+                └────────┬────────────────────┘
+                         │ BullMQ (separate connection)
+                ┌────────▼────────────────────┐
+                │  Worker (separate process)  │
+                │  src/worker.ts              │
+                │  waitlist-promote · booking-email │
+                └─────────────────────────────┘
+```
+
+- **Layered API:** routers → controllers → services → repositories → Prisma.
+- **Bookings:** serializable transactions with bounded retry on write conflicts; `@@unique([userId, eventId])`; soft cancellation; WAITLISTED when full.
+- **Queues:** BullMQ v6 over node-redis via `createNodeRedisClient`, on its **own** connection (`src/infra/queue-backend.ts`), distinct from the cache/rate-limit client (`src/infra/redis.ts`).
+- **Worker:** independent process consuming `waitlist-promote` and `booking-email`.
+
+## API endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/health` | – | liveness + uptime |
+| POST | `/v1/auth/signup` | – | `{email,password,name,role?}` → accessToken + refresh cookie |
+| POST | `/v1/auth/login` | – | rate-limited: 5 req / 15 min / IP |
+| POST | `/v1/auth/refresh` | cookie | rotates refresh token; reuse revokes the whole family |
+| POST | `/v1/auth/logout` | cookie | revokes all refresh tokens for the user |
+| GET | `/v1/events` | – | `page,limit,venue,from,to`; cached per list version |
+| GET | `/v1/events/:id` | – | cached 60 s + jitter |
+| POST | `/v1/events` | ORGANIZER/ADMIN | |
+| PATCH | `/v1/events/:id` | owner ORGANIZER/ADMIN | invalidates event cache + bumps list version |
+| DELETE | `/v1/events/:id` | owner ORGANIZER/ADMIN | |
+| POST | `/v1/bookings` | ATTENDEE+ | rate-limited per user (30/min); CONFIRMED or **WAITLISTED** when full |
+| GET | `/v1/bookings` | user (ADMIN: all) | |
+| GET | `/v1/bookings/:id` | owner/ADMIN | |
+| DELETE | `/v1/bookings/:id` | owner | soft cancel → `CANCELLED`, row kept; enqueues waitlist promotion |
+
+## Local setup (fresh clone)
+
+Prerequisites: Node ≥ 24, Docker Desktop.
 
 ```bash
-git clone https://github.com/Mahmoud0A/eventify
-cd eventify
-
-npm install
-cp .env.example .env
-# edit .env — set a real JWT_ACCESS_SECRET (>=32 chars)
-
-docker compose up -d
-docker compose ps  # both healthy?
-
-npx prisma migrate dev
-npx prisma db seed
-npm run dev        # http://localhost:3000  (tsx --env-file=.env src/server.ts)
+npm ci
+docker compose up -d          # postgres + redis (+ api + worker)
+cp .env.example .env          # then adjust ports if needed
+npx prisma migrate deploy && npm run dev
 ```
 
-Seeded accounts all use password `Password123!`:
+Windows note: if host port 5432 is reserved, set `POSTGRES_HOST_PORT=6000` in `.env` (compose maps it) and point `DATABASE_URL` at `localhost:6000`. Seed demo data any time:
 
-- `organizer@example.com` (ORGANIZER)
-- `organizer2@example.com` (ORGANIZER) — second organizer for BOLA proofs
-- `admin@example.com` (ADMIN)
-- `attendee1@example.com`, `attendee2@example.com` + 16 more ATTENDEEs
-
-## Scripts
-
-- `npm run dev` — `tsx --env-file=.env src/server.ts`
-- `npm run typecheck` — `tsc --noEmit` (real gate; Node strips types without checking)
-- `npm run lint` — `eslint .`
-- `npm test` — placeholder until Session 6 (Vitest)
-
-## Environment
-
-`.env` is gitignored. Required keys (also in `src/config/config.ts` `envSchema`):
-
-```
-PORT=3000
-DATABASE_URL=postgresql://eventify:eventify@localhost:5432/eventify
-JWT_ACCESS_SECRET=change-me-to-a-long-random-secret-at-least-32-characters
-WEB_ORIGIN=http://localhost:3000
-TEST_AUTH_ENABLED=false   # true only for the Session-3 parallel-bookings script
+```bash
+npx tsx --env-file=.env prisma/seed.ts   # idempotent; demo users incl. organizer@example.com / Password123!
 ```
 
-## API
+## Docker / local production workflow
 
-| Method | Path | Auth |
+The production image is built by `Dockerfile` (two-stage, `node:24-slim`):
+
+1. **build stage:** full deps → `prisma generate` → `npm run typecheck` as the build gate.
+2. **runtime stage:** prod-only deps, generated client copied in, runs as `USER node`.
+
+```bash
+docker compose build          # or let `up` build
+docker compose up -d          # api :3000, worker, postgres, redis
+curl http://localhost:3000/health
+```
+
+**Runtime/build-model decision (honest note):** this repo's `tsconfig.json` intentionally uses `noEmit` + `allowImportingTsExtensions` — source files import each other with real `.ts` extensions and Node strips types natively. There is therefore **no emitted `dist/server.js`**, and inventing one would mean rewriting every import. The production image instead runs the repository-compatible equivalent:
+
+```text
+node --import tsx src/server.ts     # api
+node --import tsx src/worker.ts     # worker
+```
+
+`--import tsx` loads TypeScript inside the same Node process (no shell/tsx parent wrapper), so SIGTERM reaches Node directly — which the graceful-shutdown handlers rely on. The typecheck gate still runs inside the image build.
+
+## Environment variables
+
+| Variable | Required | Purpose |
 |---|---|---|
-| GET | `/health` | public |
-| GET | `/v1/events?page=&limit=&venue=&from=&to=` | **public** (read-only catalog) |
-| GET | `/v1/events/:id` | **public** |
-| POST | `/v1/events` | ORGANIZER or ADMIN |
-| PATCH | `/v1/events/:id` | owner ORGANIZER or ADMIN |
-| DELETE | `/v1/events/:id` | owner ORGANIZER or ADMIN |
-| POST | `/v1/bookings` | any authenticated user |
-| GET | `/v1/bookings` | authenticated (own bookings; ADMIN sees all) |
-| GET | `/v1/bookings/:id` | authenticated (own booking; ADMIN bypass) |
-| DELETE | `/v1/bookings/:id` | authenticated (own booking only) |
-| POST | `/v1/auth/signup` | public |
-| POST | `/v1/auth/login` | public |
-| POST | `/v1/auth/refresh` | public (refresh cookie) |
-| POST | `/v1/auth/logout` | public (clears cookie) |
+| `DATABASE_URL` | yes | Postgres connection string |
+| `REDIS_URL` | yes (defaults `redis://localhost:6379`) | cache + rate limiting + BullMQ |
+| `JWT_ACCESS_SECRET` | yes (≥32 chars) | HS256 access-token signing — treat as a real secret in production |
+| `WEB_ORIGIN` | no | allowed CORS origin for the refresh cookie |
+| `PORT` | no (default 3000) | API listen port |
+| `TEST_DATABASE_URL` | tests only | overrides base URL for deriving `eventify_test` |
 
-- Booking creation validates `z.strictObject({ eventId: uuid })`; `userId` is taken from the JWT (`req.auth.sub`), never the body.
-- `GET /v1/events` is intentionally public — it returns only `title/venue/startsAt/price` with no user data, like a public event site. All mutating routes are protected.
-- Ownership: `PATCH/DELETE /v1/events/:id` checks `organizerId === token.sub` unless `role === ADMIN`.
+Never commit `.env`. All production values are provided via the hosting dashboard.
 
-## Bookings — persistence, capacity, concurrency
+## Testing
 
-- All bookings live in PostgreSQL (`prisma/schema.prisma` + `prisma/migrations/*`). Restarting `npm run dev` keeps them — no in-memory store.
-- Capacity rule counts **only** `CONFIRMED` bookings.
-- `@@unique([userId, eventId])` prevents duplicates. Inside a `Serializable` transaction:
-  - no existing row → `create CONFIRMED`
-  - existing `CANCELLED` → flip to `CONFIRMED` (same capacity check)
-  - existing `CONFIRMED`/`WAITLISTED` → `409`
-- `P2002` (unique violation) maps to `409`; serialization failures (`P2034` / `TransactionWriteConflict` from `@prisma/adapter-pg`) are retried up to 8×.
-
-### Concurrency proof (Session 3, Task 2)
-
-After `npx prisma db seed`, copy the `Capacity Workshop` event id and the first 20 user ids into `scripts/fixtures/parallel-users.json` (seed already writes correct ids there). Then:
+16 integration tests (Vitest + Supertest) run against the real app via `src/app.ts` using **real signed JWTs** (`TEST_AUTH_ENABLED` is forced off):
 
 ```bash
-# terminal 1
-npm run dev
-
-# terminal 2
-node scripts/parallel-bookings.ts
-# expected: { '201': 5, '409': 15 }  PASS
+npm test
 ```
 
-Verify in psql:
+Isolation: `vitest.setup.ts` derives an `eventify_test` database from `DATABASE_URL`/`TEST_DATABASE_URL`, **hard-refuses any database whose name doesn't end in `_test`**, creates it if missing, applies migrations, truncates every table after each test, and flushes dedicated Redis DB 1. The development database is never touched. Suites run with `fileParallelism: false` so truncation isolation is deterministic.
 
-```sql
-SELECT status, COUNT(*) FROM "Booking" WHERE "eventId"='<capacity-event>' GROUP BY status;
--- 5 CONFIRMED expected, never more
-```
+Coverage highlights: signup/login, refresh rotation + reuse-revokes-family, RBAC (ORGANIZER vs ATTENDEE vs anonymous), full-event → WAITLISTED, duplicate-booking 409, cancel-then-rebook reuses the same row, event-cache invalidation after PATCH.
 
-### Sandbox seed (Session 3, SQL)
+## CI
 
-`session-3-sandbox-seed.sql` (also `session-3-sandbox-seed.sql` in the HW folder) seeds a **separate** `sandbox` database (snake_case) with ~2k users / 200 events / 10k bookings. Mounted via `docker-compose.yml`:
+GitHub Actions (`.github/workflows/ci.yml`) on every push to `session-*`/`main` and PRs to `main`, with two stable check names suitable for branch protection:
 
-```yaml
-- ./session-3-sandbox-seed.sql:/docker-entrypoint-initdb.d/10-sandbox-seed.sql:ro
-```
+- **`typecheck-and-lint`** — `tsc --noEmit` + ESLint.
+- **`test`** — Postgres 18 + Redis 8 service containers; `DATABASE_URL` targets `eventify_test`, `REDIS_URL` uses DB 1, CI-only `JWT_ACCESS_SECRET`; migrations apply inside `vitest.setup.ts`; runs the full integration suite.
 
-First `docker compose up -d` creates it; to re-seed: `docker compose down -v && docker compose up -d`.
+Branch protection requiring these checks has not been enabled yet (repository setting, pending after push).
 
-## Auth & refresh rotation (Session 4)
+## Deployment (planned — not deployed)
 
-- `JWT_ACCESS_SECRET` via `envSchema` (never `process.env` directly); `WEB_ORIGIN` optional.
-- Access token: `HS256`, 15 min, claims `{ sub, role }`, verified with `algorithms: ["HS256"]` and Zod-parsed payload (no `as` cast).
-- Refresh token: 32 random bytes, `base64url`, stored as `sha256` hex; raw value only in `httpOnly` + `Secure` (prod) + `SameSite=strict` cookie scoped to `path: /v1/auth/refresh` (`maxAge` 7 days, `expiresAt` 7 days).
-- Rotation atomically `create new` + `revokedAt + replacedById` on old row. Re-presenting a rotated token is a theft signal → `401` + family revocation (`revokeAllForUser`). All refresh failures are the same generic `401` (no oracle).
-- Passwords: `bcrypt` (10 rounds); seeded users all `Password123!`.
+Target stack: **Render** (API from this Dockerfile; optional paid Background Worker) + **Neon Postgres** + **Upstash Redis**. Full step-by-step instructions, required dashboard variables, `preDeployCommand: npx prisma migrate deploy`, seeding, and free-tier/cold-start trade-offs are documented in [`docs/deployment.md`](docs/deployment.md). Accounts are not provisioned yet; nothing in this README claims a live deployment.
 
-## Security triage
+## Decisions & trade-offs
 
-See `PR_DESCRIPTIONS.md` Session 4 — prompt *"Audit this endpoint against the OWASP API Security Top 10. For each finding: severity, line, fix."* Findings triaged as **fixed / false-positive / accepted-risk** with one-line justifications. Exit ticket answer included.
+- **tsx runtime instead of `dist/*.js`:** honors the repo's `.ts`-extension/noEmit conventions; see the Docker section above.
+- **node-redis everywhere:** cache/limiter use node-redis directly; BullMQ wraps it via `createNodeRedisClient` on a second connection — one Redis client library, two isolated clients.
+- **Cache strategy:** cache-aside; `event:{id}` TTL 60 s + jitter; list pages keyed by a version counter `events:list:{v}:{page}` — a single `INCR events:list:v` invalidates every page; writes **delete** the event key rather than setting fresh values (avoids racing a concurrent read into caching stale data again).
+- **Rate limiting:** fixed-window counters `rl:{identity}:{path}:{window}`; login strict per-IP (5/15 min), bookings per-user (30/min) keyed by the authenticated subject, never `req.ip`.
+- **Waitlist semantics (Session 5):** full event returns **201 WAITLISTED** (not 409); cancelling a CONFIRMED booking enqueues `waitlist-promote {eventId}`; the worker promotes the oldest WAITLISTED booking inside a serializable transaction that re-checks capacity, then enqueues `booking-email` `confirmation {bookingId}`. Re-running promotion is idempotent.
+- **Refresh rotation:** every refresh mints a new token and revokes the old one (`replacedById` chain); replaying a rotated token is treated as theft and revokes the entire family.
+- **Graceful shutdown:** both processes handle SIGTERM/SIGINT with re-entry guards — API drains HTTP then closes Redis/BullMQ/Prisma; worker stops consuming jobs before releasing connections.
+- **Free-tier reality:** Render's free tier does not include background workers; until a paid worker exists, waitlist emails/promotions are proven locally but must not be assumed to run in production. Free services also cold-start slowly.
 
-## Tech stack
+## AI usage disclosure
 
-Node 24, TypeScript strict (no `any`), Express 5, Zod 4, PostgreSQL 18, Prisma 7 (`prisma-client` + `@prisma/adapter-pg`), JWT HS256, bcrypt, tsx.
+AI (pair-programming agents) assisted with: scaffolding infrastructure files (Redis/BullMQ clients, queues), writing the Vitest/Supertest harness and integration suites, the CI workflow, Dockerfile/compose authoring, and documentation drafts. Every AI-generated line was reviewed, executed, and verified by running the actual gates (`typecheck`, `lint`, 16-test suite, `docker build`, live compose smoke test). Notable corrections made during verification: BullMQ requires one connection per blocking consumer (the initial shared-client design silently starved workers — diagnosed via Redis queue inspection and fixed with a connection factory); BullMQ v6 forbids `:` in custom job IDs; the generated Prisma client had to move out of devDependencies to survive `--omit=dev`; CI initially lacked a Redis service and a `JWT_ACCESS_SECRET`, both added. Session 5 interrogation notes (why `updateEvent` deletes rather than sets the cache key) are reflected in the cache-strategy decision above.
 
-## Project status
+## Session map
 
-Complete for Sessions 1–4; see `tasks/todo.md` and `PR_DESCRIPTIONS.md` for the per-session checklists and exit tickets.
+| Session | Delivered |
+|---|---|
+| 1–2 | Express skeleton, domain types, Zod validation, in-memory → DB migration |
+| 3 | Transactional Prisma bookings, seed data, concurrency script |
+| 4 | JWT auth, refresh rotation, RBAC, BOLA protection |
+| 5 | Redis cache-aside + metrics, rate limiting, BullMQ queues, worker, waitlist promotion |
+| 6 | Test suite, CI, Docker/compose, graceful shutdown, deployment prep, docs |
