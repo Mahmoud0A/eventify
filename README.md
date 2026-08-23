@@ -122,7 +122,7 @@ GitHub Actions (`.github/workflows/ci.yml`) on every push to `session-*`/`main` 
 - **`typecheck-and-lint`** — `tsc --noEmit` + ESLint.
 - **`test`** — Postgres 18 + Redis 8 service containers; `DATABASE_URL` targets `eventify_test`, `REDIS_URL` uses DB 1, CI-only `JWT_ACCESS_SECRET`; migrations apply inside `vitest.setup.ts`; runs the full integration suite.
 
-Branch protection requiring these checks has not been enabled yet (repository setting, pending after push).
+Branch protection on `main` is enabled and requires both checks — `typecheck-and-lint` and `test` — before merging (strict: branches must be up to date).
 
 ## Deployment (planned — not deployed)
 

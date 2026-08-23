@@ -21,8 +21,8 @@ Title: `capstone: Eventify v1.0`
 - [x] Add `redis` service container + `REDIS_URL` env to the existing test job (currently missing — S5 code requires it)
 - [x] Keep typecheck+lint job; wire real `npm test` (Vitest) into the test job with Postgres + Redis services
 - [x] Define stable job/check names for required-status-check configuration (`typecheck-and-lint`, `test`)
-- [ ] Branch protection: enable required checks on GitHub (repository setting — pending push + manual enablement; not verifiable locally)
-- [ ] Capture screenshot/evidence of a deliberately broken CI run (red), then fix and show green (requires the branch to be pushed)
+- [x] Branch protection: enable required checks on GitHub — `typecheck-and-lint` + `test` required on `main` (verified via API, strict mode)
+- [x] Capture evidence of a deliberately broken commit showing CI red — temporary isolated branch `session-6/ci-red-proof` produced failing run [32637762176](https://github.com/Mahmoud0A/eventify/actions/runs/32637762176) (`typecheck-and-lint` failure, `test` success); temp branch deleted afterwards, Session 6 branch remained green
 
 ## D. Productionization
 - [x] `Dockerfile` (two-stage, node:24-slim, prisma generate before type validation, USER node)

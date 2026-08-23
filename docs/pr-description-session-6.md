@@ -17,6 +17,10 @@ Session 6 capstone completing Eventify v1.0:
 
 16 integration tests across auth/RBAC/bookings/cache (+health smoke), all against real HTTP via Supertest and isolated `eventify_test`. Gates: `npm run typecheck` ✅ · `npm run lint` ✅ · `npm test` 16/16 ✅ · `docker build` ✅ · `docker compose config` ✅ · live compose smoke: `/health` 200, worker consuming queues, authenticated signup→event→booking flow CONFIRMED.
 
+CI evidence:
+- Green: run [32637178761](https://github.com/Mahmoud0A/eventify/actions/runs/32637178761) — `typecheck-and-lint` ✅ · `test` ✅ (Postgres + Redis service containers).
+- Red proof: deliberately broken temporary branch produced failing run [32637762176](https://github.com/Mahmoud0A/eventify/actions/runs/32637762176) — `typecheck-and-lint` ❌ (isolated type error), `test` ✅ untouched; temp branch deleted after capture.
+
 ## Security/auth work carried forward & verified
 
 Refresh-token rotation with theft detection (replayed token revokes whole family), BOLA-protected bookings/events, role gates, login rate limit 5/15 min per IP, bookings rate limit 30/min per user subject (never IP).
@@ -25,4 +29,6 @@ Refresh-token rotation with theft detection (replayed token revokes whole family
 
 - tsx runtime instead of emitted JS (documented rationale in README).
 - Render free tier has no background workers → production background jobs pending paid worker.
-- Free-tier cold starts; branch protection not yet enabled (pending push).
+- Free-tier cold starts; Render/Neon/Upstash provisioning pending manual account setup.
+- Branch protection on `main` requires both CI checks (`typecheck-and-lint`, `test`) — enabled and verified via API.
+- PR currently reports conflicts against the reconstructed `origin/main` line; resolution strategy pending owner decision (recommended: keep this branch's tested implementations).
