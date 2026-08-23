@@ -1,43 +1,57 @@
-# Eventify — Study Plan & Progress
+# Session 5 Implementation Tasks
 
-## Session 1: First Server
-- [x] Domain types in `src/domain.ts` (literal unions, `findById`)
-- [x] Raw HTTP endpoints: `/health`, `/events`, `/events/:id` (later migrated to Express 5)
-- [x] Error shape `{ "error": "..." }` + catch-all 404
-- [x] Store migrated to PostgreSQL via Prisma (replaces the `events.json` file load)
+## Background Job Choice: Option A — WAITLIST PROMOTION
 
-## Session 2: Bookings, Pagination & Consistency
-- [x] `/v1/bookings` POST/GET/DELETE (controller → service → repository)
-- [x] Pagination + filtering on `/v1/events` (`{ data, page, limit, total }`)
-- [x] `z.strictObject` validation + `validateQuery` → `res.locals.query`
-- [x] Capacity + duplicate logic in the service layer
-- [x] Consistency pass: single error middleware, no stray `res.status(500)`
+### Phase 1: Infrastructure Setup
+- [ ] Add dependencies: `ioredis`, `bullmq`, `@msgpack/msgpack` (for BullMQ v6)
+- [ ] Create `src/infra/redis.ts` — node-redis client for cache + rate limiting
+- [ ] Create `src/infra/queue-backend.ts` — SECOND Redis client wrapped with `createNodeRedisClient` for BullMQ v6
+- [ ] Create `src/jobs/email.queue.ts` — `booking-email` Queue with `confirmation` job
+- [ ] Create `src/worker.ts` — independent worker process (waitlist-promote + email consumers)
+- [ ] Update `src/config/config.ts` with `REDIS_URL` validation
+- [ ] Verify docker-compose.yml Redis service is usable
 
-## Session 3: Bookings That Survive a Restart
-- [x] `docker-compose.yml` (Postgres)
-- [x] `prisma.config.ts` + schema migration (User, Event, Booking, RefreshToken)
-- [x] All `/events` endpoints on Postgres via Prisma repositories
-- [x] Transactional booking service (`Serializable` + retry on P2034)
-- [x] Rebooking-after-cancel + P2002→409 mapping
-- [x] Seed script: organizers, admin, attendees, events, bookings + 20 users for parallel script (idempotent, fresh IDs logged)
-- [x] `scripts/parallel-bookings.ts` + `scripts/fixtures/parallel-users.json` (verified 5×201 / 15×409)
-- [x] Prove index with EXPLAIN ANALYZE — see PR_DESCRIPTIONS.md Session 3 (Index Scan via Booking_userId_eventId_key)
+### Phase 2: Cache Implementation
+- [ ] Implement cache-aside helper in `src/infra/cache.ts` (or extend redis.ts)
+- [ ] Cache keys: `event:{id}`, `events:list:{v}:{page}`, `events:list:v`
+- [ ] Event cache: TTL 60s + jitter
+- [ ] List cache: version counter `events:list:v`, INCR on write invalidates all pages
+- [ ] Instrument `getEvent` and `listEvents` in `src/events/events.service.ts`
+- [ ] Implement cache metrics: hit/miss counters, ratio, structured JSON logging every 60s or 100 lookups
+- [ ] On event update: DELETE cache key (do NOT SET fresh value)
 
-## Session 4: Locking Eventify Down
-- [x] `requireAuth` / `requireRole` on all mutating routes
-- [x] Ownership checks (BOLA): events (ORGANIZER owns / ADMIN bypass), bookings cancel = own only (403)
-- [x] Booking `userId` taken from the JWT, never the request body (strictObject)
-- [x] Refresh-token rotation (opaque token, SHA-256 hashed at rest, httpOnly/SameSite=strict cookie)
-- [x] Reuse detection → family revocation (revoke all on theft signal)
-- [x] bcrypt password hashing (replaced unsalted SHA-256)
-- [x] JWT payload Zod-parsed (no `as` cast), HS256 pinned on verify
-- [x] `z.email()` (Zod 4) + `z.strictObject` everywhere
-- [x] `.env.example` lists `JWT_ACCESS_SECRET`, `WEB_ORIGIN`, `TEST_AUTH_ENABLED`
-- [x] Test-only `X-User-Id` bypass gated behind `TEST_AUTH_ENABLED` (off in prod)
+### Phase 3: Rate Limiting
+- [ ] Create `src/middleware/rateLimit.ts` — Redis sliding window limiter
+- [ ] Apply to `POST /v1/auth/login` — strict, per-IP (`rl:{ip}:{path}:{win}`)
+- [ ] Apply to `POST /v1/bookings` — per-user (authenticated user ID, NEVER req.ip)
+- [ ] Document sensible max/window values with rationale
+- [ ] Create executable burst test script proving: succeed → 429 → recover after window
 
-## Operational steps (fresh clone)
-1. `docker compose up -d`
-2. `npx prisma migrate dev`
-3. `npx prisma db seed`  (seeded users use password `Password123!`)
-4. Update `scripts/fixtures/parallel-users.json` with real ids + capacity-5 event id
-5. `npm run dev`
+### Phase 4: Waitlist Promotion (Option A)
+- [ ] Modify `src/bookings/bookings.service.ts`:
+  - When event at capacity, create `WAITLISTED` booking instead of returning 409
+  - On `cancelBooking` (CONFIRMED): enqueue `waitlist-promote` job with `{ eventId }`
+- [ ] Create waitlist-promote queue and worker consumer
+- [ ] Worker promotes oldest WAITLISTED → CONFIRMED in transaction with capacity re-check
+- [ ] Worker enqueues `booking-email` confirmation job with `{ bookingId }`
+- [ ] Ensure idempotency: re-running promotion job must NOT double-promote
+- [ ] Create executable test/script proving waitlist promotion behavior
+
+### Phase 5: Email Queue Integration
+- [ ] Identify existing mailer implementation (if any) or create minimal nodemailer wrapper
+- [ ] Wire email queue consumer in worker to send confirmation emails
+- [ ] Ensure booking creation (confirmed) and waitlist promotion both enqueue confirmation emails
+
+### Phase 6: Verification & Testing
+- [ ] `npm run typecheck` passes
+- [ ] `npm run lint` passes
+- [ ] Cache metrics proof: actual observed hit/miss/ratio output
+- [ ] Rate limiter burst test proof: requests succeed → 429 → recover
+- [ ] Waitlist promotion test proof: full event → waitlisted → cancel → promote → confirmed
+- [ ] Worker process starts and processes jobs correctly
+- [ ] Deployment prep: Render/Neon/Upstash accounts (document status)
+
+### Phase 7: Documentation
+- [ ] PR description with all required sections
+- [ ] AI caching-strategy interrogation notes
+- [ ] Exit ticket: Why does `updateEvent` DELETE the cache key instead of SETting the fresh value?
