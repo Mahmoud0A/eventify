@@ -1,57 +1,47 @@
-# Session 5 Implementation Tasks
+# Session 6 — Capstone: Eventify v1.0
 
-## Background Job Choice: Option A — WAITLIST PROMOTION
+Branch: `session-6/capstone-eventify-v1` (base: `session-5/caching-queues-background-jobs` @ `d82a949`)
+Title: `capstone: Eventify v1.0`
 
-### Phase 1: Infrastructure Setup
-- [x] Add dependencies: `ioredis`, `bullmq`, `@msgpack/msgpack` (for BullMQ v6)
-- [x] Create `src/infra/redis.ts` — node-redis client for cache + rate limiting
-- [x] Create `src/infra/queue-backend.ts` — SECOND Redis client wrapped with `createNodeRedisClient` for BullMQ v6
-- [x] Create `src/jobs/email.queue.ts` — `booking-email` Queue with `confirmation` job
-- [x] Create `src/worker.ts` — independent worker process (waitlist-promote + email consumers)
-- [x] Update `src/config/config.ts` with `REDIS_URL` validation
-- [x] Verify docker-compose.yml Redis service is usable
+## A. Testing foundation
+- [ ] Add devDependencies: `vitest`, `supertest`, `@types/supertest`; replace placeholder `npm test`
+- [ ] Create `vitest.config.ts` (node environment, setup file, per-file isolation)
+- [ ] Create `vitest.setup.ts`: unique `eventify_test` DB per run — apply migrations (`prisma migrate deploy`) + truncate tables between tests
+- [ ] Test env contract: `TEST_DATABASE_URL`, isolated Redis DB index (or flush scope) so tests never touch dev/prod data
 
-### Phase 2: Cache Implementation
-- [x] Implement cache-aside helper in `src/infra/cache.ts` (or extend redis.ts)
-- [x] Cache keys: `event:{id}`, `events:list:{v}:{page}`, `events:list:v`
-- [x] Event cache: TTL 60s + jitter
-- [x] List cache: version counter `events:list:v`, INCR on write invalidates all pages
-- [x] Instrument `getEvent` and `listEvents` in `src/events/events.service.ts`
-- [x] Implement cache metrics: hit/miss counters, ratio, structured JSON logging every 60s or 100 lookups
-- [x] On event update: DELETE cache key (do NOT SET fresh value)
+## B. Integration tests (Vitest + Supertest, real HTTP against `app`)
+- [ ] Real JWT auth: signup/login return working access tokens used across suites
+- [ ] Refresh-token rotation: refresh exchanges token, old token rejected; reuse of rotated token triggers revocation (`Invalid token`)
+- [ ] Authorization: ORGANIZER can create/update/delete events; ATTENDEE gets 403; unauthenticated 401
+- [ ] Booking behavior: under-capacity → CONFIRMED; full event → WAITLISTED (Session 5 semantics); duplicate booking 409
+- [ ] Cancel-then-rebook: DELETE soft-cancels; rebook reopens CONFIRMED when seat free, WAITLISTED when full
+- [ ] Cache invalidation: GET event cached → PATCH event → next GET reflects fresh value; list version INCR invalidates cached page
 
-### Phase 3: Rate Limiting
-- [x] Create `src/middleware/rateLimit.ts` — Redis sliding window limiter
-- [x] Apply to `POST /v1/auth/login` — strict, per-IP (`rl:{ip}:{path}:{win}`)
-- [x] Apply to `POST /v1/bookings` — per-user (authenticated user ID, NEVER req.ip)
-- [x] Document sensible max/window values with rationale
-- [x] Create executable burst test script proving: succeed → 429 → recover after window
+## C. CI workflow (`.github/workflows/ci.yml`)
+- [ ] Add `redis` service container + `REDIS_URL` env to the existing test job (currently missing — S5 code requires it)
+- [ ] Keep typecheck+lint job; wire real `npm test` (Vitest) into the test job with Postgres + Redis services
+- [ ] Define stable job/check names for required-status-check configuration
+- [ ] Branch protection prep: document required checks (typecheck-and-lint, test) for `main` merges
+- [ ] Capture screenshot/evidence of a deliberately broken CI run (red), then fix and show green
 
-### Phase 4: Waitlist Promotion (Option A)
-- [x] Modify booking creation (bookings.repository):
-  - When event at capacity, create `WAITLISTED` booking instead of returning 409
-  - On cancel of CONFIRMED booking: enqueue `waitlist-promote` job with `{ eventId }`
-- [x] Create waitlist-promote queue and worker consumer
-- [x] Worker promotes oldest WAITLISTED → CONFIRMED in transaction with capacity re-check
-- [x] Worker enqueues `booking-email` confirmation job with `{ bookingId }`
-- [x] Ensure idempotency: re-running promotion job must NOT double-promote
-- [x] Create executable test/script proving waitlist promotion behavior
+## D. Productionization
+- [ ] `Dockerfile` (multi-stage; runtime uses tsx — tsconfig is noEmit/allowImportingTsExtensions by design)
+- [ ] Extend `docker-compose.yml`: `api` + `worker` services alongside `db` + `redis`
+- [ ] Graceful shutdown for API (`SIGTERM`/`SIGINT` → `server.close()` + close Redis/BullMQ connections); verify worker shutdown path
+- [ ] Finalize environment contract in `.env.example` (+ any `NODE_ENV`/test additions) — no secrets committed
 
-### Phase 5: Email Queue Integration
-- [x] Identify existing mailer implementation (if any) or create minimal wrapper (none existed; worker logs the send as transport)
-- [x] Wire email queue consumer in worker to send confirmation emails
-- [ ] Ensure booking creation (confirmed) and waitlist promotion both enqueue confirmation emails (promotion only — confirmed-create email deferred)
+## E. Deployment preparation (accounts are user-manual actions)
+- [ ] Render: web service from Dockerfile + worker service; document settings
+- [ ] Neon Postgres: connection string wiring, `npx prisma migrate deploy` against it
+- [ ] Upstash Redis: `REDIS_URL` wiring (TLS URL) for both api and worker
+- [ ] Seed demo data against Neon (organizer demo account + sample events)
+- [ ] Live `/health` verification + end-to-end live booking flow evidence (curl/output)
 
-### Phase 6: Verification & Testing
-- [x] `npm run typecheck` passes
-- [x] `npm run lint` passes
-- [x] Cache metrics proof: actual observed hit/miss/ratio output (`{"hits":99,"misses":1,"total":100,"hitRatio":0.99}`)
-- [x] Rate limiter burst test proof: requests succeed → 429 → recover (login 401×5→429 Retry-After 900 + simulated expiry; bookings 404×30→429 at #31 + natural recovery after window)
-- [x] Waitlist promotion test proof: full event → waitlisted → cancel → promote → confirmed (9/9 checks)
-- [x] Worker process starts and processes jobs correctly
-- [ ] Deployment prep: Render/Neon/Upstash accounts (NOT done — accounts not created yet)
+## F. Documentation & delivery
+- [ ] README rewrite: portfolio-grade (architecture diagram/description, sessions map, quickstart, env table, deployment section)
+- [ ] AI usage documentation (what AI did, what was verified/corrected, interrogation notes carried from S5)
+- [ ] PR description draft: what changed, evidence links (cache metrics, rate-limit burst, waitlist, CI red/green, live health + booking)
+- [ ] Final gates: `npm run typecheck`, `npm run lint`, `npm test`, production image build (`docker build`) all green
 
-### Phase 7: Documentation
-- [ ] PR description with all required sections (pending PR creation)
-- [ ] AI caching-strategy interrogation notes (pending PR description)
-- [ ] Exit ticket: Why does `updateEvent` DELETE the cache key instead of SETting the fresh value? (pending PR description)
+## Explicitly out of scope / pending user action
+- Render/Neon/Upstash account creation (manual, cannot be verified locally until done)
