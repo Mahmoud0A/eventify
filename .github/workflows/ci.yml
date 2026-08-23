@@ -35,6 +35,26 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Vitest setup derives the eventify_test database from this URL and hard-
+      # refuses any target whose name does not end in `_test`, so the development
+      # `eventify` database can never be touched by the suite.
+      DATABASE_URL: postgresql://eventify:eventify@localhost:5432/eventify_test
+      # Dedicated CI Redis logical DB (index 1); setup flushes it between tests.
+      REDIS_URL: redis://localhost:6379/1
+      # CI-only signing secret (>=32 chars) — never used outside workflows.
+      JWT_ACCESS_SECRET: ci-only-jwt-signing-secret-0123456789abcdef-not-for-prod
+      WEB_ORIGIN: http://localhost:3000
+      TEST_AUTH_ENABLED: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,12 +62,7 @@ jobs:
           node-version: '24'
           cache: 'npm'
       - run: npm ci
-      - run: npx prisma generate
-        env:
-          DATABASE_URL: postgresql://eventify:eventify@localhost:5432/eventify
-      - run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://eventify:eventify@localhost:5432/eventify
-      - run: npm test
-        env:
-          DATABASE_URL: postgresql://eventify:eventify@localhost:5432/eventify
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Run integration tests (migrations apply to eventify_test inside vitest.setup.ts)
+        run: npm test
