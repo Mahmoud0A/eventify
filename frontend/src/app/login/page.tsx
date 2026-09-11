@@ -127,11 +127,11 @@ function LoginForm() {
             </button>
             <button
               type="button"
-              onClick={() => fillDemoAccount("user-1@example.com", "Password123!")}
+              onClick={() => fillDemoAccount("attendee1@example.com", "Password123!")}
               className="rounded border border-slate-200 bg-white px-2 py-1.5 text-slate-700 hover:bg-slate-100 hover:border-slate-300 text-left transition-colors"
             >
               <span className="font-medium block text-emerald-600">Attendee</span>
-              <span className="text-[10px] text-slate-500 truncate block">user-1@example.com</span>
+              <span className="text-[10px] text-slate-500 truncate block">attendee1@example.com</span>
             </button>
           </div>
         </div>

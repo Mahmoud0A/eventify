@@ -1,6 +1,14 @@
 import { Booking, Event, PaginatedEvents, Role } from "@/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+export function getApiBase(): string {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host !== "localhost" && host !== "127.0.0.1") {
+      return "/api/backend";
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+}
 
 let currentAccessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
@@ -63,7 +71,7 @@ async function request<T>(
   options: RequestInit = {},
   retryOn401 = true
 ): Promise<T> {
-  const url = `${API_BASE}${path}`;
+  const url = `${getApiBase()}${path}`;
   const headers = new Headers(options.headers || {});
 
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
@@ -107,7 +115,7 @@ async function refreshTokenSilently(): Promise<string | null> {
 
   refreshPromise = (async () => {
     try {
-      const res = await fetch(`${API_BASE}/v1/auth/refresh`, {
+      const res = await fetch(`${getApiBase()}/v1/auth/refresh`, {
         method: "POST",
         credentials: "include",
       });
