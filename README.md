@@ -10,7 +10,7 @@
 
 Eventify is a full-stack event management and booking platform built with a modern React / Next.js frontend and a resilient Node.js / Express REST API. The platform delivers transactional event bookings, automatic waitlist queues, role-based access control (RBAC), cache-aside performance with Redis, and complete end-to-end integration.
 
-**Live Frontend Application:** <https://frontend-kappa-one-99.vercel.app> — Vercel Serverless Edge, verified live: user registration, authenticated session management, event creation & editing, transactional bookings, and dashboards.
+**Live Frontend Application:** <https://eventify-fullstack.vercel.app> — Vercel Serverless Edge, verified live: user registration, authenticated session management, event creation & editing, transactional bookings, and dashboards.
 
 **Live Backend REST API:** <https://eventify-capstone.onrender.com> — Render Web Service (Docker), verified live: `/health` 200, JWT auth, event discovery, and confirmed transactional bookings against Neon PostgreSQL & Upstash Redis.
 
@@ -229,7 +229,7 @@ curl http://localhost:3000/health
 
 | Service | Provider | Status | Public URL |
 |---|---|---|---|
-| **Frontend Web App** | Vercel (Edge / Serverless) | Live & Verified | [`https://frontend-kappa-one-99.vercel.app`](https://frontend-kappa-one-99.vercel.app) |
+| **Frontend Web App** | Vercel (Edge / Serverless) | Live & Verified | [`https://eventify-fullstack.vercel.app`](https://eventify-fullstack.vercel.app) |
 | **Backend REST API** | Render (Docker Web Service) | Live & Verified | [`https://eventify-capstone.onrender.com`](https://eventify-capstone.onrender.com) |
 | **Database** | Neon PostgreSQL 18 | Live & Verified | Managed Cloud PostgreSQL (SSL) |
 | **Redis Cache & Queues** | Upstash Redis 8 | Live & Verified | Managed Serverless Redis (TLS) |
