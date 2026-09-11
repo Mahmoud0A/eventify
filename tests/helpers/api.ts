@@ -86,8 +86,8 @@ export async function createEvent(
     .post("/v1/events")
     .set("Authorization", `Bearer ${organizerToken}`)
     .send({
-      title: `S6 Event ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      description: "Session 6 integration test event",
+      title: `Integration Event ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      description: "Integration test event",
       venue: "Test Hall",
       startsAt: futureDate(),
       capacity: 10,

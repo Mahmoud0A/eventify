@@ -6,7 +6,7 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
 
-    // Strictness (Session 1): full strict mode, and indexed access
+    // Type Safety: full strict mode, and indexed access
     // (rows[0], record[key]) yields `T | undefined` so you must check.
     "strict": true,
     "noUncheckedIndexedAccess": true,

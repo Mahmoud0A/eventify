@@ -1,5 +1,5 @@
-// Booking integration tests — real JWT auth against the Session 5 semantics:
-// full events produce WAITLISTED (not 409), cancellation is soft, and
+// Booking integration tests — real JWT auth:
+// full events produce WAITLISTED, cancellation is soft, and
 // cancel-then-rebook reopens the SAME row instead of duplicating it.
 import request from "supertest";
 import { describe, expect, it } from "vitest";
@@ -37,7 +37,7 @@ describe("bookings", () => {
     expect(second.status).toBe(409);
   });
 
-  it("creates a WAITLISTED booking when the event is full (Session 5 behavior)", async () => {
+  it("creates a WAITLISTED booking when the event is full", async () => {
     const organizer = await signup("w-org", "ORGANIZER");
     const firstAttendee = await signup("w-first");
     const secondAttendee = await signup("w-second");

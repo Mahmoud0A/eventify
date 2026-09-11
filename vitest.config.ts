@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Session 6 contract: suites run sequentially so DB truncation in the
+    // Integration test suites run sequentially so DB truncation in the
     // setup file isolates every test deterministically.
     fileParallelism: false,
     setupFiles: ["./vitest.setup.ts"],

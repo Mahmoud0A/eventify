@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -18,6 +18,12 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - name: Typecheck and build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run typecheck
+          npm run build
 
   test:
     runs-on: ubuntu-latest
@@ -66,3 +72,8 @@ jobs:
         run: npx prisma generate
       - name: Run integration tests (migrations apply to eventify_test inside vitest.setup.ts)
         run: npm test
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm ci
+          npm run test

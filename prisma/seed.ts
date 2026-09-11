@@ -1,8 +1,7 @@
-// Seed script for Eventify — Session 3
-// Idempotent — runs twice without errors or duplicates
-// Creates: 20 users (two ORGANIZERs, one ADMIN, 17 attendees),
-//          5 events, and some pre-existing bookings
-// Plus: 20 distinct users and one capacity-5 event for task-2 script (same 20)
+// Seed script for Eventify
+// Idempotent — runs repeatedly without errors or duplicates
+// Creates privileged users (ORGANIZER, ADMIN, attendees),
+// verified sample events, and seed bookings for development and testing.
 
 import { PrismaClient } from "../.prisma/client/client.ts";
 import { PrismaPg } from "@prisma/adapter-pg";

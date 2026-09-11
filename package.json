@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Eventify - the event booking API built across the course",
+  "description": "Eventify — Full-Stack Event Management Platform with Next.js, Express, Prisma, PostgreSQL, and Redis",
   "engines": {
     "node": ">=24"
   },

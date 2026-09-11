@@ -77,6 +77,8 @@ Organizers can create, publish, edit, and delete events with validated forms and
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+> 📖 **Deep Dive Documentation:** For in-depth analysis of PostgreSQL `Serializable` transaction isolation, bounded retry loops, `EXPLAIN ANALYZE` index performance, Redis versioned cache invalidation, BullMQ worker topologies, and OWASP API security defenses, see [docs/architecture.md](docs/architecture.md).
+
 ---
 
 ## Features Matrix
@@ -218,6 +220,19 @@ docker compose up -d
 # Verify health
 curl http://localhost:3000/health
 ```
+
+---
+
+## Production Deployment
+
+| Service | Provider | Status | Public URL |
+|---|---|---|---|
+| **Backend REST API** | Render (Docker Web Service) | Live & Verified | [`https://eventify-capstone.onrender.com`](https://eventify-capstone.onrender.com) |
+| **Database** | Neon PostgreSQL 18 | Live & Verified | Pooled connection with SSL |
+| **Redis Cache & Queues** | Upstash Redis 8 | Live & Verified | Managed TLS Redis |
+| **Frontend App** | Vercel / Render | Configured | See [Deployment Guide](docs/deployment.md) |
+
+For complete production deployment instructions, environment variable configurations, and zero-cost hosting setup, refer to [docs/deployment.md](docs/deployment.md).
 
 ---
 

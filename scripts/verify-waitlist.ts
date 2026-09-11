@@ -1,5 +1,5 @@
-// Session 5 acceptance — Option A: WAITLIST PROMOTION
-// Run: npx tsx --env-file=.env scripts/session5-waitlist.ts
+// Waitlist promotion integration verification script
+// Run: npx tsx --env-file=.env scripts/verify-waitlist.ts
 // Requires: API on :3000, worker running, Postgres + Redis healthy.
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";

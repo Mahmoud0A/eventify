@@ -1,7 +1,7 @@
 # Eventify — Deployment Guide (Render + Neon + Upstash)
 
 > **Status: DEPLOYED & VERIFIED (2026-08-23).**
-> Live API: <https://eventify-capstone.onrender.com> — Render Free Web Service (Docker), branch `session-6/capstone-eventify-v1`, backed by Neon PostgreSQL and Upstash Redis.
+> Live API: <https://eventify-capstone.onrender.com> — Render Free Web Service (Docker), branch `main`, backed by Neon PostgreSQL and Upstash Redis.
 > Worker: not deployed (free-tier limitation) — background jobs queue until a worker service is added.
 
 ## Verified deployment record
@@ -9,7 +9,7 @@
 | Item | Actual value |
 |---|---|
 | Render service type | Web Service (Docker image from repo `Dockerfile`) |
-| Branch deployed | `session-6/capstone-eventify-v1` |
+| Branch deployed | `main` |
 | Health endpoint | `/health` → HTTP 200 `{"status":"ok",…}` (verified live and via Playwright/Chromium) |
 | Migrations | `npx prisma migrate deploy` executed manually against the Neon production URL |
 | Seed | idempotent `prisma/seed.ts` applied; 5 demo events observed live via public API (incl. open future events) |
@@ -54,7 +54,7 @@ Paid plans can instead set Pre-Deploy Command: `npx prisma migrate deploy`.
 ## 3. Render API service
 
 - **Type:** Web Service → deploy from Docker repo, Dockerfile at repo root.
-- **Branch:** `session-6/capstone-eventify-v1`
+- **Branch:** `main`
 - **Health check path:** `/health`
 - **Environment variables (dashboard only — never committed):**
 
@@ -63,25 +63,44 @@ Paid plans can instead set Pre-Deploy Command: `npx prisma migrate deploy`.
 | `DATABASE_URL` | Neon pooled URL |
 | `REDIS_URL` | Upstash `rediss://…` URL |
 | `JWT_ACCESS_SECRET` | freshly generated ≥32-char random string (real production secret) |
-| `WEB_ORIGIN` | front-end origin, if any |
+| `WEB_ORIGIN` | Deployed frontend origin (e.g., `https://eventify.vercel.app`) |
 | `NODE_ENV` | `production` |
 
 `PORT` is optional (defaults to 3000); if the platform injects one, bind follows it.
 
-## 4. Worker service
+## 4. Frontend Deployment
 
-- **Preferred:** paid Render Background Worker, same Docker image, start command:
+### Option A: Vercel (Recommended — Free Tier)
+1. Navigate to [Vercel Dashboard](https://vercel.com/new) and import `https://github.com/Mahmoud0A/eventify`.
+2. Configure project settings:
+   - **Framework Preset**: Next.js
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `.next`
+3. Set Environment Variable:
+   - `NEXT_PUBLIC_API_URL`: `https://eventify-capstone.onrender.com`
+4. Click **Deploy**. Vercel will build and assign a production URL (e.g., `https://eventify-<user>.vercel.app`).
+5. Update `WEB_ORIGIN` in Render API settings to your Vercel URL to allow secure CORS cookies.
+
+### Option B: Render Web Service (`render.yaml`)
+1. From the Render Dashboard, choose **New Blueprint** and connect `Mahmoud0A/eventify`.
+2. Render will automatically detect `render.yaml` and provision both the `eventify-api` (Docker) and `eventify-frontend` (Node/Next.js) web services.
+3. Supply `DATABASE_URL` and `REDIS_URL` secrets when prompted.
+
+## 5. Background Worker Service (Optional)
+
+- **Preferred:** Paid Render Background Worker, same Docker image, start command:
   ```text
   node --import tsx src/worker.ts
   ```
   Same environment variables as the API (no port needed).
-- **Free-tier trade-off (current state):** no worker is deployed. Waitlist promotions and confirmation emails are proven locally/in CI but are **not processed in production** until this service exists.
+- **Free-tier trade-off (current state):** no worker is deployed on Render Free. Waitlist promotions and confirmation emails are verified in automated test suites and locally, but background jobs queue in Redis until a worker service is added.
 
-## 5. Cold-start trade-off
+## 6. Cold-start trade-off
 
 Free Render services sleep after inactivity; first request pays a spin-up delay (tens of seconds). Health-check-based monitors or a paid plan remove this.
 
-## 6. Verification performed on the live deployment
+## 7. Verification performed on the live deployment
 
 ```text
 GET  /health                    -> 200 {"status":"ok"}

@@ -5,7 +5,7 @@ import { env } from "../config/config.ts";
 // BullMQ requires a dedicated connection per blocking consumer (each Worker
 // and each QueueEvents instance). This factory hands out a fresh node-redis
 // client wrapped for BullMQ on every call — separate from the cache/limiter
-// client in infra/redis.ts, as the Session 5 contract requires.
+// client in infra/redis.ts, avoiding blocking command interference.
 const openClients: RedisClientType[] = [];
 
 export function getBullRedisClient() {
