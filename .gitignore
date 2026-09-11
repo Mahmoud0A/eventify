@@ -11,3 +11,5 @@ boot*.err
 setup-and-run.ps1
 cj.txt
 cj2.txt
+.playwright-mcp/
+live-health-proof.png

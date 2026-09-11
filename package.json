@@ -9,13 +9,20 @@
   },
   "scripts": {
     "dev": "tsx --env-file=.env src/server.ts",
+    "dev:frontend": "npm --prefix frontend run dev",
     "typecheck": "tsc --noEmit",
+    "typecheck:frontend": "npm --prefix frontend run typecheck",
+    "typecheck:all": "npm run typecheck && npm run typecheck:frontend",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:frontend": "npm --prefix frontend run test",
+    "test:all": "npm test && npm run test:frontend",
+    "build:frontend": "npm --prefix frontend run build"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
@@ -34,6 +41,7 @@
     "bcrypt": "^6.0.0",
     "bullmq": "^6.2.0",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "ioredis": "^6.0.0",

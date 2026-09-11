@@ -3,6 +3,9 @@ import typescriptPlugin from "@typescript-eslint/eslint-plugin";
 
 export default [
   {
+    ignores: ["frontend/**", ".prisma/**", "dist/**", "node_modules/**", "coverage/**"],
+  },
+  {
     files: ["**/*.ts"],
     languageOptions: {
       parser: typescriptParser,
