@@ -236,11 +236,6 @@ For complete production deployment instructions, environment variable configurat
 
 ---
 
-## Submission & CV Alignment
+## License
 
-This repository truthfully demonstrates every statement on my submitted CV:
-- **Full-Stack Event Management Platform**: Modern React / Next.js frontend integrated with an Express REST API.
-- **TypeScript & Clean Architecture**: End-to-end type safety, layered backend design, domain models, and Next.js App Router.
-- **Database & Transactions**: Prisma ORM with PostgreSQL, serializable booking transactions, and composite unique constraints.
-- **Advanced Workflows**: Role-based access control, waitlist queues via BullMQ, and token family revocation.
-- **Testing & Quality Assurance**: 26 automated tests, automated linting, CI branch protection, and real browser verification.
+MIT
