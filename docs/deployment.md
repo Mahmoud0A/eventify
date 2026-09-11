@@ -1,7 +1,7 @@
 # Eventify — Deployment Guide (Render + Neon + Upstash)
 
 > **Status: DEPLOYED & VERIFIED.**
-> Live Frontend: <https://eventify-fullstack.vercel.app> — Vercel Serverless Edge, connected to live backend via same-origin rewrite proxy.
+> Live Frontend: <https://eventify-hub.vercel.app> (alias: <https://eventify-fullstack.vercel.app>) — Vercel Serverless Edge, connected to live backend via same-origin rewrite proxy.
 > Live API: <https://eventify-capstone.onrender.com> — Render Free Web Service (Docker), branch `main`, backed by Neon PostgreSQL and Upstash Redis.
 > Worker: not deployed (free-tier limitation) — background jobs queue until a worker service is added.
 
